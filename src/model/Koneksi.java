@@ -9,6 +9,29 @@ package model;
  *
  * @author HP
  */
+import java.sql.*;
 public class Koneksi {
-    
-}
+    public static Connection getConnection(){
+        try {
+            //untuk MySQL versi 8.0+
+            Class.forName("com.mysql.jdbc.Driver");
+            String url = "jdbc:mysql://localhost/bookselfappdb?useUnicode=true&characterEncoding=UTF-8&useSSL=false";
+            String user = "root";
+            String pass = "root0506";
+
+            return DriverManager.getConnection(url, user, pass);
+
+               } catch (ClassNotFoundException e) {
+            System.err.println("Error: Driver JDBC tidak ditemukan!");
+            e.printStackTrace();
+        } catch (SQLException e) {
+            System.err.println("Error: Gagal koneksi ke database!");
+            e.printStackTrace();
+        }
+        
+        return null;
+
+      
+        }
+    }
+
