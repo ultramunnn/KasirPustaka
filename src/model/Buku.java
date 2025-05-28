@@ -260,6 +260,33 @@ public class Buku {
     } 
     
 }
+   
+   // View book_id
+   public static int getNextBookId() {
+    int nextId = 1; // default 
+    Connection connect = Koneksi.getConnection();
+    
+    try {
+        stmt = connect.createStatement();
+        query = "SELECT MAX(book_id) AS max_id FROM books";
+        
+        rs = stmt.executeQuery(query);
+        
+        if (rs.next()) {
+            int maxId = rs.getInt("max_id");
+            if(maxId > 0){
+               nextId = maxId + 1;  
+            }
+           
+        }
+    } catch (SQLException e) {
+        System.out.println("Error ambil next book_id: " + e.getMessage());
+    } 
+   
+    
+    return nextId;
+}
+
 
 
 }

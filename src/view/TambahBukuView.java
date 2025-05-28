@@ -24,7 +24,10 @@ public class TambahBukuView extends javax.swing.JFrame {
     public TambahBukuView() {
         initComponents();
         
-        Tid_buku.setEditable(false);
+       int nextId = Buku.getNextBookId();
+       Tid_buku.setText(String.valueOf(nextId));
+       Tid_buku.setEditable(false);
+
     
         
         // Ambil data dari DB
@@ -359,12 +362,31 @@ public class TambahBukuView extends javax.swing.JFrame {
     private void BsimpanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BsimpanActionPerformed
        
         try {
-        String judul = Tjudul_buku.getText();
-        String penulis = Tpenulis.getText();
-        int stock = Integer.parseInt(Tstock.getText());
-        int harga = Integer.parseInt(Tharga.getText());
+        String judul = Tjudul_buku.getText().trim();
+        String penulis = Tpenulis.getText().trim();
+        String stockText = Tstock.getText().trim();
+        String hargaText = Tharga.getText().trim();
 
+        
+        // Validasi kosong
+        if (judul.isEmpty() || penulis.isEmpty() || stockText.isEmpty() || hargaText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Semua field harus diisi!", "Input Kosong", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // Parsing angka dengan try-catch terpisah untuk validasi lebih spesifik
+        int stock, harga;
+        try {
+            stock = Integer.parseInt(stockText);
+            harga = Integer.parseInt(hargaText);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Stock dan Harga harus berupa angka!", "Input Kosong", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
         Buku.addBook(judul, penulis, harga, stock);
+        int nextId = Buku.getNextBookId();
+        Tid_buku.setText(String.valueOf(nextId));
 
         JOptionPane.showMessageDialog(this, "Buku berhasil ditambahkan");
 
