@@ -13,67 +13,89 @@ package model;
 import java.sql.*;
 public class Buku {
     private static String query;
+    private static String query_c;
     private static ResultSet rs;
     private static Statement stmt;
+    private static ResultSet rs_c;
+    private static Statement stmt_c;
+        
+
 
     
     //Insert Books
-    public static void addBook (String title, String author, int price){
-        Connection connect = Koneksi.getConnection();
-
-        
-        try{
-            stmt = connect.createStatement();
-            query = "INSERT INTO books (title,author,price)"
-                    + "VALUES ('"+ title + "', '"+ author +"','"+ price +"')";
-           
-            int rs = stmt.executeUpdate(query);
-
-            stmt.close();
-            
-          if(rs > 0){
-            System.out.println("Berhasil menambah buku.");
-          } else {
-            System.out.println("Gagal menambah buku.");
-          }
-              
-        }catch(SQLException ex){
-            System.out.println("Tidak berhasil menambah buku error: " + ex);
-            
-            
-        }
-    
-    }
-    
-    //Search Book
-    public static void searchBook(String title) {
+    public static void addBook(String title, String author, int price, int stock) {
     Connection connect = Koneksi.getConnection();
+ 
 
     try {
         stmt = connect.createStatement();
-        query = "SELECT * FROM books WHERE title LIKE '%" + title + "%'";
+        String query = "INSERT INTO books (title, author, price) VALUES ('" + title + "', '" + author + "', " + price + ")";
+        int res = stmt.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
+
+        if (res > 0) {
+            rs = stmt.getGeneratedKeys();
+            if (rs.next()) {
+                int bookId = rs.getInt(1);
+
+                stmt_c = connect.createStatement();
+                String query_c = "INSERT INTO stock (book_id, quantity) VALUES (" + bookId + ", " + stock + ")";
+                int res_c = stmt_c.executeUpdate(query_c);
+
+                if (res_c > 0) {
+                    System.out.println("Berhasil menambah buku dan stock.");
+                } else {
+                    System.out.println("Gagal menambah stock.");
+                }
+            }
+        } else {
+            System.out.println("Gagal menambah buku.");
+        }
+    } catch (SQLException ex) {
+        System.out.println("Error saat menambah buku: " + ex);
+    } 
+}
+
+    //Search Book
+    public static String[][] searchBook(String keyword) {
+        String[][] data = new String[0][0];
+        Connection connect = Koneksi.getConnection();
+
+    try {
+        stmt = connect.createStatement();
+        query = "SELECT b.book_id, b.title, b.author, b.price, " +
+                "(SELECT quantity FROM stock s WHERE s.book_id = b.book_id) AS stock " +
+                "FROM books b WHERE b.title LIKE '%" + keyword + "%' OR b.author LIKE '%" + keyword + "%'";
         
         rs = stmt.executeQuery(query);
-        System.out.println("Query yang dijalankan: " + query);
+        
+        int rowCount = 0;
+        while (rs.next()) {
+            rowCount++;
+        }
 
-        boolean found = false;
-        while(rs.next()) {
-            found = true;
-            System.out.println("ID: " + rs.getInt("book_id")
-                + ", Title: " + rs.getString("title")
-                + ", Author: " + rs.getString("author")
-                + ", Price: " + rs.getInt("price"));
+        if (rowCount > 0) {
+            data = new String[rowCount][5];
+            rs.beforeFirst();
+            int i = 0;
+            while(rs.next()) {
+                data[i][0] = rs.getString("book_id");
+                data[i][1] = rs.getString("title");
+                data[i][2] = rs.getString("author");
+                data[i][3] = rs.getString("price");
+                data[i][4] = rs.getString("stock") != null ? rs.getString("stock") : "0";
+                i++;
+            }
         }
-        
-        if(!found) {
-            System.out.println("Buku tidak ditemukan.");
-        }
-        
+
         rs.close();
         stmt.close();
     } catch(SQLException ex) {
         System.out.println("Error saat mencari buku: " + ex);
     }
+    
+        System.out.println(data);
+    
+    return data;
 }
 
     
@@ -84,7 +106,9 @@ public class Buku {
 
     try {
         Statement stmt = connect.createStatement();
-        String query = "SELECT * FROM books ORDER BY book_id;";
+        String query = "SELECT b.book_id, b.title, b.author, b.price, " +
+               "(SELECT quantity FROM stock s WHERE s.book_id = b.book_id) AS stock " +
+               "FROM books b ORDER BY b.book_id;";
         ResultSet rs = stmt.executeQuery(query);
 
         // Hitung jumlah baris terlebih dahulu
@@ -94,7 +118,7 @@ public class Buku {
         }
 
         if (rowCount > 0) {
-            data = new String[rowCount][4]; // kolom: id, title, author, price, stock
+            data = new String[rowCount][5]; // kolom: id, title, author, price, stock
             rs.beforeFirst(); // Reset cursor ke awal
 
             int i = 0;
@@ -103,6 +127,7 @@ public class Buku {
                 data[i][1] = rs.getString("title");
                 data[i][2] = rs.getString("author");
                 data[i][3] = rs.getString("price");
+                data[i][4] = rs.getString("stock");
                
                 i++;
             }
@@ -136,7 +161,7 @@ public class Buku {
 
    
    //edit data book
-   public static void editBook(int book_id, String newTitle, String newAuthor, int newPrice){
+   public static void editBook(int book_id, String newTitle, String newAuthor, int newPrice, int stock){
        Connection connect = Koneksi.getConnection();
        
        try{
@@ -148,27 +173,59 @@ public class Buku {
                      + "WHERE book_id = " + book_id;
 
         int result = stmt.executeUpdate(query);
+        
+        
+        query_c = "SELECT COUNT(*) AS COUNT FROM stock WHERE book_id = " + book_id;
+        rs_c = stmt.executeQuery(query_c);
+        
+      
+
+        int count = 0;
+        if (rs_c.next()) {
+            count = rs_c.getInt("count");
+        }
+        rs_c.close();
+
+        if (count > 0) {
+            // Update stock
+            String queryUpdateStock = "UPDATE stock SET quantity = " + stock + " WHERE book_id = " + book_id;
+            stmt.executeUpdate(queryUpdateStock);
+        } else {
+            // Insert stock baru
+            String queryInsertStock = "INSERT INTO stock (book_id, quantity) VALUES (" + book_id + ", " + stock + ")";
+            stmt.executeUpdate(queryInsertStock);
+        }
+
         stmt.close();
 
-        if(result > 0){
+        if (result > 0) {
             System.out.println("Berhasil mengupdate buku dengan ID " + book_id);
         } else {
             System.out.println("Gagal mengupdate buku, ID " + book_id + " tidak ditemukan.");
         }
-           
-       }catch(SQLException ex){
-             System.out.println("Error saat mengupdate buku: " + ex);
-       }
-       
-   }
+
+    } catch (SQLException ex) {
+        System.out.println("Error saat mengupdate buku: " + ex);
+    }
+}
    
+   
+   //delete book
    public static void deleteBook(int book_id) {
     Connection connect = Koneksi.getConnection();
 
     try {
+        //delete stock
+        stmt_c = connect.createStatement();
+        query_c = "DELETE FROM stock WHERE book_id =" + book_id;
+        stmt_c.executeUpdate(query_c);
+        
+        //delete book
         stmt = connect.createStatement();
         query = "DELETE FROM books WHERE book_id = " + book_id;
         int result = stmt.executeUpdate(query);
+        
+        
         stmt.close();
 
         if(result > 0){
@@ -180,31 +237,29 @@ public class Buku {
         System.out.println("Error saat menghapus buku: " + ex);
     }
 }
+   
+   //Delete all book   
+   public static void deleteAllBooks() {
+    Connection connect = Koneksi.getConnection();
 
+    try {
+        stmt = connect.createStatement();
 
+        // Hapus semua stock dulu
+        stmt.executeUpdate("DELETE FROM stock");
+
+        // Hapus semua buku
+        int result = stmt.executeUpdate("DELETE FROM books");
+
+        System.out.println("Berhasil menghapus semua buku dan stock.");
+
+        stmt.close();
+        connect.close();
+    } catch (SQLException ex) {
+        System.out.println("Error saat menghapus semua buku: " + ex);
+    } 
     
-    
-  
-    public static void main(String[] args) {
-      
-        System.out.println("-------Tambah Buku-------");
-        Buku.addBook("Mamah Kenapa aku TI", "Munir", 200000);
-        Buku.addBook("AKuh LeMAS", "Joni", 300000);
-        
-//        
-//          System.out.println("---------Edit Buku-----------\n");
-//          Buku.editBook(3, "Java Anjay", "Yono", 500000);
-//        
-//        System.out.println("-----------Delete Buku----------\n");
-//        Buku.deleteBook(6);
-        
-        
-        System.out.println("----------List Buku----------\n");
-        String[][] books = getAllBook();
-        printBooks(books);
-         
-        
-    }
 }
 
 
+}
