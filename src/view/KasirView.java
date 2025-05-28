@@ -31,7 +31,7 @@ public class KasirView extends javax.swing.JFrame {
 
         // Nonaktifkan kemampuan mengetik manual
         JSpinner.DefaultEditor editor = (JSpinner.DefaultEditor) SJumlah.getEditor();
-        editor.getTextField().setEditable(false); 
+        editor.getTextField().setEditable(false);
     }
     
 

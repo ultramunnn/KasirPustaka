@@ -29,8 +29,8 @@ public class MenuView extends javax.swing.JFrame {
 
         jPanel2 = new javax.swing.JPanel();
         jMenuBar1 = new javax.swing.JMenuBar();
-        jMenu1 = new javax.swing.JMenu();
-        jMenu2 = new javax.swing.JMenu();
+        jMenuKasirBuku = new javax.swing.JMenu();
+        jMenuTambahBuku = new javax.swing.JMenu();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -49,14 +49,24 @@ public class MenuView extends javax.swing.JFrame {
 
         jMenuBar1.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.RAISED));
 
-        jMenu1.setForeground(new java.awt.Color(0, 204, 153));
-        jMenu1.setText("Kasir Buku");
-        jMenu1.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
-        jMenuBar1.add(jMenu1);
+        jMenuKasirBuku.setForeground(new java.awt.Color(0, 204, 153));
+        jMenuKasirBuku.setText("Kasir Buku");
+        jMenuKasirBuku.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
+        jMenuKasirBuku.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jMenuKasirBukuMouseClicked(evt);
+            }
+        });
+        jMenuBar1.add(jMenuKasirBuku);
 
-        jMenu2.setText("Tambah Buku");
-        jMenu2.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
-        jMenuBar1.add(jMenu2);
+        jMenuTambahBuku.setText("Tambah Buku");
+        jMenuTambahBuku.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
+        jMenuTambahBuku.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jMenuTambahBukuMouseClicked(evt);
+            }
+        });
+        jMenuBar1.add(jMenuTambahBuku);
 
         setJMenuBar(jMenuBar1);
 
@@ -73,6 +83,20 @@ public class MenuView extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+
+    private void jMenuKasirBukuMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jMenuKasirBukuMouseClicked
+        // TODO add your handling code here:
+        KasirView db = new KasirView();
+      db.setLocationRelativeTo(this);
+      db.setVisible(true);
+    }//GEN-LAST:event_jMenuKasirBukuMouseClicked
+
+    private void jMenuTambahBukuMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jMenuTambahBukuMouseClicked
+        // TODO add your handling code here:
+        TambahBukuView db = new TambahBukuView();
+      db.setLocationRelativeTo(this);
+      db.setVisible(true);
+    }//GEN-LAST:event_jMenuTambahBukuMouseClicked
 
     /**
      * @param args the command line arguments
@@ -110,9 +134,9 @@ public class MenuView extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JMenu jMenu1;
-    private javax.swing.JMenu jMenu2;
     private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JMenu jMenuKasirBuku;
+    private javax.swing.JMenu jMenuTambahBuku;
     private javax.swing.JPanel jPanel2;
     // End of variables declaration//GEN-END:variables
 }
