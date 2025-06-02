@@ -9,20 +9,114 @@ package view;
  * @author HP
  */
 import javax.swing.*;
+import java.sql.*;
+import javax.swing.table.DefaultTableModel;
+import model.Koneksi;
+import model.Transaksi;
 public class KasirView extends javax.swing.JFrame {
-
+private int lastUsedId = 0;
+    
+    
     /**
      * Creates new form KasirView
      */
     public KasirView() {
         initComponents();
+        isiComboBoxBuku();
         TTransaksi.setEditable(false);
         TJudul.setEditable(false);
         THarga.setEditable(false);
         SetJumlahBuku();
+        initTableModel();
+        initForm();
+        
+        
+
+        
         
 
     }
+    private void isiComboBoxBuku() {
+        try {
+        Connection conn = Koneksi.getConnection();
+        if (conn == null) {
+            System.out.println("Error: Gagal terhubung ke database saat mengisi CBuku.");
+            return;
+        }
+
+        String sql = "SELECT book_id FROM books";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery();
+
+        CBuku.removeAllItems();
+        int itemCount = 0;
+        while (rs.next()) {
+            String bookId = rs.getString("book_id");
+            CBuku.addItem(bookId);
+            System.out.println("Menambahkan book_id ke CBuku: " + bookId);
+            itemCount++;
+        }
+
+        System.out.println("Jumlah item di CBuku: " + itemCount);
+        rs.close();
+        ps.close();
+        if (conn != null) conn.close();
+    } catch (Exception e) {
+        System.out.println("Gagal mengisi CBuku: " + e.getMessage());
+        e.printStackTrace();
+    }
+    }
+    private void initForm() {
+    try {
+        Connection conn = Koneksi.getConnection();
+        if (conn == null) {
+            System.out.println("Error: Gagal terhubung ke database saat menginisialisasi form.");
+            TTransaksi.setText("1");
+            return;
+        }
+
+        // Periksa apakah ada data di tabel
+        String sql = "SELECT purchase_item_id FROM purchase_items ORDER BY purchase_item_id DESC LIMIT 1";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery();
+
+        if (rs.next()) {
+            // Jika ada data, ambil ID terakhir yang ada di tabel sebagai nilai awal
+            lastUsedId = rs.getInt("purchase_item_id");
+            System.out.println("ID terakhir di tabel: " + lastUsedId);
+        } else {
+            // Jika tidak ada data, mulai dari 1
+            lastUsedId = 0;
+            System.out.println("Tidak ada data di tabel, lastUsedId diatur ke: " + lastUsedId);
+        }
+
+        // Atur TTransaksi ke next ID
+        int nextId = lastUsedId + 1;
+        TTransaksi.setText(String.valueOf(nextId));
+        System.out.println("TTransaksi diatur ke next ID: " + nextId);
+
+        rs.close();
+        ps.close();
+        if (conn != null) conn.close();
+    } catch (Exception e) {
+        System.out.println("Gagal menginisialisasi form: " + e.getMessage());
+        e.printStackTrace();
+        TTransaksi.setText("1"); // Default ke 1 jika error
+    }
+}
+    
+    private void initTableModel() {
+        // Ambil data dari DB
+        String[][] data = Transaksi. getRiwayatTransaksi();
+
+        // Nama kolom
+        String[] columnNames = {"Id Transaksi","Kode Buku", "Judul","Harga", "Jumlah", "Total"};
+
+        // Set model langsung ke JTable
+        DefaultTableModel model = new DefaultTableModel(data, columnNames);
+        TabelKasir.setModel(model);
+        
+}
     
     private void SetJumlahBuku() {
         // Model spinner dengan nilai awal = 1, minimum = 1, maksimum = 50, step = 1
@@ -143,16 +237,26 @@ public class KasirView extends javax.swing.JFrame {
                 {null, null, null, null}
             },
             new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4"
+                "Id_transaksi", "Judul", "Jumlah", "Total"
             }
         ));
         TabelKasir.setSelectionBackground(new java.awt.Color(0, 204, 153));
         TabelKasir.setSelectionForeground(new java.awt.Color(255, 255, 255));
         TabelKasir.setShowGrid(true);
+        TabelKasir.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                TabelKasirMouseClicked(evt);
+            }
+        });
         jScrollPane1.setViewportView(TabelKasir);
 
         BBayar.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
         BBayar.setText("Bayar");
+        BBayar.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                BBayarMouseReleased(evt);
+            }
+        });
         BBayar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 BBayarActionPerformed(evt);
@@ -280,26 +384,544 @@ public class KasirView extends javax.swing.JFrame {
     private void THargaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_THargaActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_THargaActionPerformed
-
+    private boolean isInitialLoad = true;
+    private boolean isTableClick = false; // Flag untuk menandai klik tabel
+    private String lastSelectedBookId = null; // Untuk melacak book_id terakhir
+    private int selectionCount = 0; // Untuk menghitung berapa kali buku yang sama dipilih
     private void CBukuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CBukuActionPerformed
-        // TODO add your handling code here:
+        // TODO add your handling code here:                                                                                                                                                                                                                                  
+    try {
+        if (isInitialLoad) {
+            isInitialLoad = false;
+        }
+
+        Object selectedItem = CBuku.getSelectedItem();
+        Connection conn = Koneksi.getConnection();
+        if (conn == null) {
+            System.out.println("Error: Gagal terhubung ke database.");
+            TTransaksi.setText("1"); // Default ke 1 jika koneksi gagal
+            TJudul.setText("");
+            THarga.setText("");
+            SJumlah.setValue(1);
+            return;
+        }
+
+        // Jika bukan karena klik tabel, isi TTransaksi dengan next ID
+        if (!isTableClick) {
+            String sql = "SELECT MAX(purchase_item_id) AS max_id FROM purchase_items";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            int nextId = 1; // Default ke 1 jika tidak ada data
+            if (rs.next()) {
+                int maxId = rs.getInt("max_id");
+                if (rs.wasNull()) {
+                    System.out.println("max_id adalah NULL, menggunakan default ID: 1");
+                } else {
+                    nextId = maxId + 1;
+                    System.out.println("ID terbesar di tabel: " + maxId + ", next ID: " + nextId);
+                }
+            } else {
+                System.out.println("Tidak ada data di tabel, next ID diatur ke: " + nextId);
+            }
+            TTransaksi.setText(String.valueOf(nextId));
+            rs.close();
+            ps.close();
+        } else {
+            System.out.println("CBukuActionPerformed dipicu oleh klik tabel, TTransaksi tidak diubah.");
+        }
+
+        if (selectedItem == null || CBuku.getItemCount() == 0) {
+            TJudul.setText("");
+            THarga.setText("");
+            SJumlah.setValue(1);
+            System.out.println("CBuku kosong atau tidak ada item dipilih, SJumlah diatur ke: 1");
+            lastSelectedBookId = null;
+            selectionCount = 0;
+
+            // Jika CBuku kosong, pastikan TTransaksi tetap menampilkan next ID
+            if (!isTableClick) {
+                String sql = "SELECT MAX(purchase_item_id) AS max_id FROM purchase_items";
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ResultSet rs = ps.executeQuery();
+                int nextId = 1; // Default ke 1 jika tidak ada data
+                if (rs.next()) {
+                    int maxId = rs.getInt("max_id");
+                    if (rs.wasNull()) {
+                        System.out.println("max_id adalah NULL, menggunakan default ID: 1");
+                    } else {
+                        nextId = maxId + 1;
+                        System.out.println("ID terbesar di tabel: " + maxId + ", next ID: " + nextId);
+                    }
+                } else {
+                    System.out.println("Tidak ada data di tabel, next ID diatur ke: " + nextId);
+                }
+                TTransaksi.setText(String.valueOf(nextId));
+                rs.close();
+                ps.close();
+            }
+
+            if (conn != null) conn.close();
+            return;
+        }
+
+        String bookId = selectedItem.toString().trim();
+        System.out.println("book_id yang dipilih: " + bookId);
+
+        if (!isTableClick) {
+            if (bookId.equals(lastSelectedBookId)) {
+                selectionCount++;
+            } else {
+                lastSelectedBookId = bookId;
+                selectionCount = 1;
+            }
+            System.out.println("Selection count untuk book_id " + bookId + ": " + selectionCount);
+        }
+
+        String sql = "SELECT title, price FROM books WHERE book_id = ?";
+        PreparedStatement ps = conn.prepareStatement(sql.trim());
+        ps.setString(1, bookId.trim());
+        ResultSet rs = ps.executeQuery();
+
+        if (rs.next()) {
+            String title = rs.getString("title");
+            double price = rs.getDouble("price");
+            TJudul.setText(title != null ? title.trim() : "");
+            THarga.setText(String.valueOf(price));
+            System.out.println("Data dari books untuk book_id " + bookId + ": title=" + title + ", price=" + price);
+
+            sql = "SELECT quantity FROM purchase_items WHERE book_id = ? ORDER BY purchase_item_id DESC LIMIT 1";
+            PreparedStatement psQty = conn.prepareStatement(sql);
+            psQty.setString(1, bookId);
+            ResultSet rsQty = psQty.executeQuery();
+            if (rsQty.next()) {
+                int quantity = rsQty.getInt("quantity");
+                SJumlah.setValue(quantity);
+                System.out.println("Jumlah dari purchase_items untuk book_id " + bookId + ": " + quantity);
+            } else {
+                SJumlah.setValue(1);
+                System.out.println("Tidak ada data purchase_items untuk book_id " + bookId + ", SJumlah diatur ke: 1");
+            }
+            rsQty.close();
+            psQty.close();
+        } else {
+            TJudul.setText("");
+            THarga.setText("");
+            SJumlah.setValue(1);
+            System.out.println("Tidak ada data di tabel books untuk book_id " + bookId + ", SJumlah diatur ke: 1");
+            lastSelectedBookId = null;
+            selectionCount = 0;
+        }
+
+        rs.close();
+        ps.close();
+
+        if (conn != null) conn.close();
+
+    } catch (Exception e) {
+        System.out.println("Gagal mengambil data buku: " + e.getMessage());
+        e.printStackTrace();
+        TTransaksi.setText("1"); // Default ke 1 jika error
+        TJudul.setText("");
+        THarga.setText("");
+        SJumlah.setValue(1);
+        System.out.println("Error terjadi, TTransaksi diatur ke: 1, SJumlah diatur ke: 1");
+        JOptionPane.showMessageDialog(null, "Gagal mengambil data buku: " + e.getMessage());
+    } finally {
+        isTableClick = false; // Reset isTableClick setelah eksekusi selesai
+    }
     }//GEN-LAST:event_CBukuActionPerformed
 
     private void BTambahActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BTambahActionPerformed
-        // TODO add your handling code here:
+                                                                                                                                                                                                                                              
+    try {
+        // Validasi ID Transaksi
+        String idTransaksiStr = TTransaksi.getText() != null ? TTransaksi.getText().trim() : "";
+        System.out.println("ID Transaksi dari form: " + idTransaksiStr);
+        if (idTransaksiStr.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "ID Transaksi tidak boleh kosong.");
+            return;
+        }
+        int idTransaksi;
+        try {
+            idTransaksi = Integer.parseInt(idTransaksiStr);
+        } catch (NumberFormatException e) {
+            System.out.println("Error: ID Transaksi tidak valid: " + idTransaksiStr);
+            JOptionPane.showMessageDialog(null, "ID Transaksi harus berupa angka.");
+            return;
+        }
+
+        // Validasi Kode Buku (CBuku)
+        Object selectedItem = CBuku.getSelectedItem();
+        if (selectedItem == null) {
+            System.out.println("Error: Kode Buku tidak dipilih.");
+            JOptionPane.showMessageDialog(null, "Kode Buku tidak boleh kosong.");
+            return;
+        }
+        String bookId = selectedItem.toString().trim();
+        System.out.println("Kode Buku dari CBuku: " + bookId);
+        if (bookId.isEmpty()) {
+            System.out.println("Error: Kode Buku kosong setelah trim.");
+            JOptionPane.showMessageDialog(null, "Kode Buku tidak boleh kosong.");
+            return;
+        }
+
+        // Validasi Harga (diambil dari THarga, diasumsikan sudah diisi dari books)
+        String hargaStr = THarga.getText() != null ? THarga.getText().trim() : "";
+        System.out.println("Harga dari form: " + hargaStr);
+        if (hargaStr.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Harga tidak boleh kosong.");
+            return;
+        }
+        double harga;
+        try {
+            harga = Double.parseDouble(hargaStr);
+        } catch (NumberFormatException e) {
+            System.out.println("Error: Harga tidak valid: " + hargaStr);
+            JOptionPane.showMessageDialog(null, "Harga harus berupa angka.");
+            return;
+        }
+
+        // Validasi Jumlah
+        int jumlah = (Integer) SJumlah.getValue();
+        System.out.println("Jumlah dari SJumlah: " + jumlah);
+        if (jumlah <= 0) {
+            JOptionPane.showMessageDialog(null, "Jumlah harus lebih dari 0.");
+            return;
+        }
+
+        // Hitung Subtotal
+        double subtotal = harga * jumlah;
+        System.out.println("Subtotal yang dihitung: " + subtotal);
+
+        // Simpan ke database
+        Connection conn = Koneksi.getConnection();
+        if (conn == null) {
+            System.out.println("Error: Koneksi database gagal.");
+            JOptionPane.showMessageDialog(null, "Gagal terhubung ke database.");
+            return;
+        }
+
+        // Cek apakah purchase_item_id sudah ada
+        String checkSql = "SELECT COUNT(*) FROM purchase_items WHERE purchase_item_id = ?";
+        PreparedStatement checkPs = conn.prepareStatement(checkSql);
+        checkPs.setInt(1, idTransaksi);
+        ResultSet rs = checkPs.executeQuery();
+        boolean idExists = false;
+        if (rs.next()) {
+            idExists = rs.getInt(1) > 0;
+        }
+        rs.close();
+        checkPs.close();
+
+        String sql;
+        PreparedStatement ps;
+        if (idExists) {
+            // UPDATE dengan kolom yang ada, asumsikan harga diganti dengan nilai dari THarga
+            sql = "UPDATE purchase_items SET book_id = ?, quantity = ?, subtotal = ? WHERE purchase_item_id = ?";
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, bookId);
+            ps.setInt(2, jumlah);
+            ps.setDouble(3, subtotal);
+            ps.setInt(4, idTransaksi);
+        } else {
+            // INSERT dengan kolom yang ada, tanpa price
+            sql = "INSERT INTO purchase_items (purchase_item_id, book_id, quantity, subtotal) VALUES (?, ?, ?, ?)";
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, idTransaksi);
+            ps.setString(2, bookId);
+            ps.setInt(3, jumlah);
+            ps.setDouble(4, subtotal);
+        }
+
+        int rowsAffected = ps.executeUpdate();
+        if (rowsAffected > 0) {
+            System.out.println("Berhasil menyimpan/memperbarui ");
+            JOptionPane.showMessageDialog(null, "Data transaksi berhasil ditambahkan/diubah.");
+            initTableModel(); // Perbarui tabel setelah penyimpanan
+            // Perbarui TTransaksi dengan next ID
+            String nextIdSql = "SELECT MAX(purchase_item_id) AS max_id FROM purchase_items";
+            PreparedStatement nextPs = conn.prepareStatement(nextIdSql);
+            ResultSet nextRs = nextPs.executeQuery();
+            int nextId = idTransaksi; // Default ke ID saat ini
+            if (nextRs.next()) {
+                int maxId = nextRs.getInt("max_id");
+                nextId = maxId + 1;
+            }
+            TTransaksi.setText(String.valueOf(nextId));
+            System.out.println("TTransaksi diperbarui ke next ID: " + nextId);
+            nextRs.close();
+            nextPs.close();
+        } else {
+            System.out.println("Tidak ada baris yang dipengaruhi.");
+            JOptionPane.showMessageDialog(null, "Gagal menyimpan data transaksi.");
+        }
+
+        ps.close();
+        if (conn != null) conn.close();
+
+    } catch (Exception e) {
+        System.out.println("Error saat menyimpan data: " + e.getMessage());
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(null, "Error: " + e.getMessage());
+}
     }//GEN-LAST:event_BTambahActionPerformed
 
     private void BBayarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BBayarActionPerformed
         // TODO add your handling code here:
+        TransaksiView db = new TransaksiView();
+          db.setLocationRelativeTo(this);
+          db.setVisible(true);
+      
     }//GEN-LAST:event_BBayarActionPerformed
 
     private void BEditActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BEditActionPerformed
-        // TODO add your handling code here:
+        // TODO add your handling code here:                                    
+    try {
+        // Validasi ID Transaksi
+        String idTransaksiStr = TTransaksi.getText() != null ? TTransaksi.getText().trim() : "";
+        System.out.println("ID Transaksi dari form: " + idTransaksiStr);
+        if (idTransaksiStr.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "ID Transaksi tidak boleh kosong.");
+            return;
+        }
+        int idTransaksi;
+        try {
+            idTransaksi = Integer.parseInt(idTransaksiStr);
+        } catch (NumberFormatException e) {
+            System.out.println("Error: ID Transaksi tidak valid: " + idTransaksiStr);
+            JOptionPane.showMessageDialog(null, "ID Transaksi harus berupa angka.");
+            return;
+        }
+
+        // Validasi Kode Buku (CBuku)
+        Object selectedItem = CBuku.getSelectedItem();
+        if (selectedItem == null) {
+            System.out.println("Error: Kode Buku tidak dipilih.");
+            JOptionPane.showMessageDialog(null, "Kode Buku tidak boleh kosong.");
+            return;
+        }
+        String bookId = selectedItem.toString().trim();
+        System.out.println("Kode Buku dari CBuku: " + bookId);
+        if (bookId.isEmpty()) {
+            System.out.println("Error: Kode Buku kosong setelah trim.");
+            JOptionPane.showMessageDialog(null, "Kode Buku tidak boleh kosong.");
+            return;
+        }
+
+        // Validasi Harga
+        String hargaStr = THarga.getText() != null ? THarga.getText().trim() : "";
+        System.out.println("Harga dari form: " + hargaStr);
+        if (hargaStr.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Harga tidak boleh kosong.");
+            return;
+        }
+        double harga;
+        try {
+            harga = Double.parseDouble(hargaStr);
+        } catch (NumberFormatException e) {
+            System.out.println("Error: Harga tidak valid: " + hargaStr);
+            JOptionPane.showMessageDialog(null, "Harga harus berupa angka.");
+            return;
+        }
+
+        // Validasi Jumlah
+        int jumlah = (Integer) SJumlah.getValue();
+        System.out.println("Jumlah dari SJumlah: " + jumlah);
+        if (jumlah <= 0) {
+            JOptionPane.showMessageDialog(null, "Jumlah harus lebih dari 0.");
+            return;
+        }
+
+        // Hitung Total
+        double total = harga * jumlah;
+        System.out.println("Total yang dihitung: " + total);
+
+        // Simpan ke database
+        Connection conn = Koneksi.getConnection();
+        if (conn == null) {
+            System.out.println("Error: Koneksi database gagal.");
+            JOptionPane.showMessageDialog(null, "Gagal terhubung ke database.");
+            return;
+        }
+
+        String sql = "UPDATE purchase_items SET book_id = ?, quantity = ?, subtotal = ? " +
+                     "WHERE purchase_item_id = ?";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, bookId);
+        ps.setInt(2, jumlah);
+        ps.setDouble(3, total);
+        ps.setInt(4, idTransaksi);
+
+        System.out.println("Menjalankan query: " + sql);
+        System.out.println("Parameter: book_id=" + bookId + ", price=" + harga + 
+                           ", quantity=" + jumlah + ", total_amount=" + total + 
+                           ", purchase_item_id=" + idTransaksi);
+
+        int rowsAffected = ps.executeUpdate();
+        if (rowsAffected > 0) {
+            System.out.println("Berhasil memperbarui " + rowsAffected + " baris.");
+            JOptionPane.showMessageDialog(null, "Data transaksi berhasil diperbarui.");
+            initTableModel(); // Perbarui tabel setelah pembaruan
+        } else {
+            System.out.println("Tidak ada baris yang diperbarui. Mungkin purchase_item_id tidak ditemukan.");
+            JOptionPane.showMessageDialog(null, "Gagal memperbarui data transaksi. ID Transaksi tidak ditemukan.");
+        }
+
+        ps.close();
+        if (conn != null) conn.close();
+
+    } catch (Exception e) {
+        System.out.println("Error saat memperbarui data: " + e.getMessage());
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(null, "Error: " + e.getMessage());
+    }
     }//GEN-LAST:event_BEditActionPerformed
 
     private void BDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BDeleteActionPerformed
-        // TODO add your handling code here:
+        // TODO add your handling code here:                                        
+    try {
+        // Dapatkan baris yang dipilih di tabel
+        int selectedRow = TabelKasir.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih transaksi yang akan dihapus terlebih dahulu.");
+            return;
+        }
+
+        // Konfirmasi penghapusan
+        int confirm = JOptionPane.showConfirmDialog(this, "Apakah Anda yakin ingin menghapus transaksi ini?", "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        // Ambil purchase_id dari baris yang dipilih
+        String purchaseId = TabelKasir.getValueAt(selectedRow, 0).toString();
+        if (purchaseId.equals("TIDAK TERDETEKSI")) {
+            JOptionPane.showMessageDialog(this, "ID transaksi tidak valid.");
+            return;
+        }
+
+        // Hapus dari database (purchase_items dan purchase)
+        Connection conn = Koneksi.getConnection();
+        try {
+            // Hapus dari purchase_items
+            String queryItems = "DELETE FROM purchase_items WHERE purchase_item_id = ?";
+            PreparedStatement pstItems = conn.prepareStatement(queryItems);
+            pstItems.setString(1, purchaseId);
+            pstItems.executeUpdate();
+
+
+            // Hapus baris dari tabel UI
+            DefaultTableModel model = (DefaultTableModel) TabelKasir.getModel();
+            model.removeRow(selectedRow);
+
+            // Kosongkan form
+            TJudul.setText("");
+            THarga.setText("");
+            SJumlah.setValue(1);
+            CBuku.setSelectedIndex(0);
+            TTransaksi.setText("");
+
+            JOptionPane.showMessageDialog(this, "Data transaksi berhasil dihapus.");
+
+            // Perbarui tabel data setelah hapus
+           initTableModel();
+
+        } finally {
+            if (conn != null) conn.close();
+        }
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Gagal menghapus data: " + e.getMessage());
+        e.printStackTrace();
+    }
     }//GEN-LAST:event_BDeleteActionPerformed
+
+    private void BBayarMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_BBayarMouseReleased
+        // TODO add your handling code here:
+    }//GEN-LAST:event_BBayarMouseReleased
+
+    private void TabelKasirMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_TabelKasirMouseClicked
+        // TODO add your handling code here:                                                                                                                                                                                                                               
+    try {
+        if (TabelKasir == null) {
+            System.out.println("Error: TabelKasir bernilai null.");
+            JOptionPane.showMessageDialog(null, "Error: Tabel tidak ditemukan.");
+            return;
+        }
+
+        int row = TabelKasir.getSelectedRow();
+        if (row == -1) {
+            System.out.println("Tidak ada baris yang dipilih di tabel.");
+            return;
+        }
+
+        DefaultTableModel model = (DefaultTableModel) TabelKasir.getModel();
+
+        System.out.println("Data di baris " + row + ":");
+        for (int i = 0; i < model.getColumnCount(); i++) {
+            System.out.println("Kolom " + i + " (" + model.getColumnName(i) + "): " + model.getValueAt(row, i));
+        }
+
+        String idTransaksiStr = model.getValueAt(row, 0) != null ? model.getValueAt(row, 0).toString() : "";
+        int id_transaksi = Integer.parseInt(idTransaksiStr);
+
+        String bookId = model.getValueAt(row, 1) != null ? model.getValueAt(row, 1).toString() : "";
+        String judul = model.getValueAt(row, 2) != null ? model.getValueAt(row, 2).toString() : "";
+
+        String priceStr = model.getValueAt(row, 3) != null ? model.getValueAt(row, 3).toString() : "";
+        double price = Double.parseDouble(priceStr);
+
+        int quantity = (model.getValueAt(row, 4) != null) ? Integer.parseInt(model.getValueAt(row, 4).toString()) : 1;
+        SJumlah.setValue(quantity);
+
+        String subtotalStr = model.getValueAt(row, 5) != null ? model.getValueAt(row, 5).toString() : "";
+        double subtotal = Double.parseDouble(subtotalStr);
+
+        System.out.println("Data dari tabel: id_transaksi=" + id_transaksi + ", book_id=" + bookId + 
+                           ", judul=" + judul + ", price=" + price + ", quantity=" + quantity + 
+                           ", subtotal=" + subtotal);
+
+        
+
+        // Set TTransaksi dengan id_transaksi dari tabel
+        TTransaksi.setText(String.valueOf(id_transaksi));
+        TJudul.setText(judul);
+        THarga.setText(String.valueOf(price));
+
+        // Perbarui CBuku tanpa memicu ActionPerformed
+        if (bookId.isEmpty()) {
+            System.out.println("book_id kosong, CBuku tidak diperbarui.");
+            CBuku.setSelectedIndex(-1);
+        } else {
+            boolean found = false;
+            for (int i = 0; i < CBuku.getItemCount(); i++) {
+                String item = CBuku.getItemAt(i).toString();
+                if (item.equals(bookId)) {
+                    isTableClick = true; // Set isTableClick
+                    CBuku.setSelectedIndex(i);
+                    found = true;
+                    System.out.println("CBuku diperbarui ke: " + bookId);
+                    break;
+                }
+            }
+            if (!found) {
+                System.out.println("book_id " + bookId + " tidak ditemukan di CBuku.");
+                JOptionPane.showMessageDialog(null, "Kode Buku " + bookId + " tidak ditemukan di daftar.");
+            }
+        }
+
+        
+
+        // Reset isTableClick setelah selesai
+        isTableClick = false;
+
+    } catch (Exception e) {
+        System.out.println("Error saat mengisi data dari tabel: " + e.getMessage());
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(null, "Error: " + e.getMessage());
+        isTableClick = false; // Pastikan isTableClick direset bahkan jika ada error
+    }
+    }//GEN-LAST:event_TabelKasirMouseClicked
 
     /**
      * @param args the command line arguments
