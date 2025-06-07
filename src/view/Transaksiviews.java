@@ -4,44 +4,47 @@
  */
 package view;
 
-import java.util.List;
+import javax.swing.JOptionPane;
 
 /**
  *
  * @author HP
  */
 import java.util.List;
-import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
-import model.TransaksiDetail;
+import model.Transaksi;
 import model.User;
 
-public class TransaksiView extends javax.swing.JFrame {
+public class Transaksiviews extends javax.swing.JFrame {
 
     /**
-     * Creates new form DetailTransaksi
+     * Creates new form Transaksiviews
      */
-    // Variabel untuk menyimpan data yang dikirim dari KasirView
     private List<Object[]> itemsUntukBayar;
     private double totalHargaKeseluruhan;
     private int userIdKasir;
     private User userUntukKembali;
 
-    public TransaksiView(List<Object[]> itemsTransaksi, double totalKeseluruhan, int userId, User user) {
+//    public Transaksiviews() {
+//        initComponents();
+//    }
+    public Transaksiviews(List<Object[]> itemsTransaksi, double totalKeseluruhan, int userId, User user) {
         initComponents();
+
+        // Atur properti frame
         setLocationRelativeTo(null);
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         Ttotal.setEditable(false);
 
-        //this.purchaseId = purchaseId;
+        // Simpan data yang diterima
         this.userUntukKembali = user;
         this.itemsUntukBayar = itemsTransaksi;
         this.totalHargaKeseluruhan = totalKeseluruhan;
         this.userIdKasir = userId;
 
-        labelTransaksi.setText("");
-
+        // Atur tampilan awal
+        labelTransaksi.setText("[Menunggu Pembayaran]");
         tampilkanDataPesanan();
         loadRiwayatPemasukan();
     }
@@ -53,11 +56,73 @@ public class TransaksiView extends javax.swing.JFrame {
         DefaultTableModel model = new DefaultTableModel(null, columnNames);
 
         for (Object[] item : itemsUntukBayar) {
+            String subtotalStr = item[5].toString();
+            double subtotalDouble = Double.parseDouble(subtotalStr);
+
             model.addRow(new Object[]{
-                item[0], item[2], item[4], String.format("Rp %,.2f", (Double) item[5])
+                item[0], // Id Item
+                item[2], // Judul
+                item[4], // Jumlah
+                String.format("Rp %,.2f", subtotalDouble)
             });
         }
         tabelPesanan.setModel(model);
+    }
+
+    private void loadRiwayatPemasukan() {
+        tabelPemasukan.setModel(Transaksi.getRiwayatPembelianModel());
+    }
+
+    private void tampilkanStruk(long purchaseId, double uangBayar, double kembalian, String customerName) {
+          StringBuilder strukText = new StringBuilder();
+    strukText.append("        *** STRUK PEMBELIAN ***\n\n");
+    strukText.append("ID Transaksi : ").append(purchaseId).append("\n");
+    strukText.append("Pelanggan    : ").append(customerName).append("\n");
+    strukText.append("Kasir ID     : ").append(this.userIdKasir).append("\n");
+    strukText.append("=======================================\n");
+
+    for (Object[] item : this.itemsUntukBayar) {
+        // item: {idItem, kodeBuku, judul, harga, jumlah, subtotal}
+        
+        // --- INI KODE YANG SUDAH DIPERBAIKI ---
+        String judul = item[2].toString();
+        //parse String menjadi integer
+        int jumlah = Integer.parseInt(item[4].toString());
+        //parse String menjadi double
+        double subtotal = Double.parseDouble(item[5].toString());
+        
+        // Hitung harga satuan dengan aman
+        double hargaSatuan = (jumlah > 0) ? subtotal / jumlah : 0;
+        
+        strukText.append(String.format("%-25s %2d x %,.0f\n", judul, jumlah, hargaSatuan));
+    }
+
+    strukText.append("=======================================\n");
+    strukText.append(String.format("Total     : Rp %,.2f\n", this.totalHargaKeseluruhan));
+    strukText.append(String.format("Bayar     : Rp %,.2f\n", uangBayar));
+    strukText.append(String.format("Kembalian : Rp %,.2f\n\n", kembalian));
+    strukText.append("      --- Terima Kasih ---");
+
+    JTextArea textArea = new JTextArea(strukText.toString());
+    textArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
+    textArea.setEditable(false);
+    JOptionPane.showMessageDialog(this, textArea, "Struk Pembelian", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+
+
+    private void resetForm() {
+        if (this.itemsUntukBayar != null) {
+            this.itemsUntukBayar.clear();
+        }
+        this.totalHargaKeseluruhan = 0.0;
+
+        DefaultTableModel model = (DefaultTableModel) tabelPesanan.getModel();
+        model.setRowCount(0);
+
+        Ttotal.setText("Rp 0.00");
+        TUangMasuk.setText("");
+        BTotal.setEnabled(false);
     }
 
     /**
@@ -87,7 +152,7 @@ public class TransaksiView extends javax.swing.JFrame {
         jLabel3 = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         jPanel1.setBackground(new java.awt.Color(0, 204, 153));
         jPanel1.setLayout(null);
@@ -190,7 +255,7 @@ public class TransaksiView extends javax.swing.JFrame {
             }
         });
         jPanel1.add(deleteAll);
-        deleteAll.setBounds(110, 400, 89, 23);
+        deleteAll.setBounds(120, 400, 89, 23);
         jPanel1.add(Ttotal);
         Ttotal.setBounds(130, 190, 140, 22);
         jPanel1.add(TUangMasuk);
@@ -210,39 +275,53 @@ public class TransaksiView extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 551, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 482, javax.swing.GroupLayout.PREFERRED_SIZE)
         );
 
-        setSize(new java.awt.Dimension(556, 490));
-        setLocationRelativeTo(null);
+        pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void deleteAllActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteAllActionPerformed
-        int confirm = JOptionPane.showConfirmDialog(
-                this,
-                "PERINGATAN: Ini akan menghapus SEMUA RIWAYAT TRANSAKSI secara permanen.\nApakah Anda benar-benar yakin?",
-                "Konfirmasi Hapus Semua",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
-        );
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            // panggil method hapus semua dari Model
-            boolean isSuccess = TransaksiDetail.hapusSemuaTransaksi();
-
-            if (isSuccess) {
-                JOptionPane.showMessageDialog(this, "Semua riwayat transaksi berhasil dihapus.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
-                // refresh tabel riwayat
-                loadRiwayatPemasukan();
-            } else {
-                JOptionPane.showMessageDialog(this, "Gagal menghapus semua riwayat transaksi.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
+    private void BTotalActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BTotalActionPerformed
+        String uangMasukStr = TUangMasuk.getText().trim();
+        if (uangMasukStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Masukkan jumlah uang yang dibayar!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
-    }//GEN-LAST:event_deleteAllActionPerformed
+
+        try {
+            double uangBayar = Double.parseDouble(uangMasukStr);
+            if (uangBayar < this.totalHargaKeseluruhan) {
+                JOptionPane.showMessageDialog(this, "Uang yang dibayar kurang!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String customerName = JOptionPane.showInputDialog(this, "Masukkan Nama Pelanggan:", "Input Pelanggan", JOptionPane.PLAIN_MESSAGE);
+            if (customerName == null) {
+                return;
+            }
+
+            long newPurchaseId = Transaksi.finalisasiTransaksi(this.userIdKasir, customerName, this.totalHargaKeseluruhan, this.itemsUntukBayar);
+
+            if (newPurchaseId > 0) { // jika id valid
+                labelTransaksi.setText(String.valueOf(newPurchaseId));
+                double kembalian = uangBayar - this.totalHargaKeseluruhan;
+
+                tampilkanStruk(newPurchaseId, uangBayar, kembalian, customerName);
+
+                loadRiwayatPemasukan();
+                resetForm();
+
+            } else {
+                // Pesan error sudah ditampilkan oleh Model, tidak perlu di sini
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Input uang bayar tidak valid!", "Error Input", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_BTotalActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
         int selectedRow = tabelPemasukan.getSelectedRow();
@@ -268,7 +347,7 @@ public class TransaksiView extends javax.swing.JFrame {
         //jika user "Yes"
         if (confirm == JOptionPane.YES_OPTION) {
             // Panggil method hapus dari Model
-            boolean isSuccess = TransaksiDetail.hapusSatuTransaksi(purchaseIdToDelete);
+            boolean isSuccess = Transaksi.DeleteItemTransaksi(purchaseIdToDelete);
 
             if (isSuccess) {
                 JOptionPane.showMessageDialog(this, "Transaksi berhasil dihapus.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
@@ -280,46 +359,28 @@ public class TransaksiView extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_deleteActionPerformed
 
-    private void BTotalActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BTotalActionPerformed
-        String uangMasukStr = TUangMasuk.getText().trim();
-        if (uangMasukStr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Masukkan jumlah uang yang dibayar!", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+    private void deleteAllActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteAllActionPerformed
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "PERINGATAN: Ini akan menghapus SEMUA RIWAYAT TRANSAKSI secara permanen.\nApakah Anda benar-benar yakin?",
+                "Konfirmasi Hapus Semua",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
 
-        try {
-            double uangBayar = Double.parseDouble(uangMasukStr);
-            if (uangBayar < this.totalHargaKeseluruhan) {
-                JOptionPane.showMessageDialog(this, "Uang yang dibayar kurang!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+        if (confirm == JOptionPane.YES_OPTION) {
+            // panggil method hapus semua dari Model
+            boolean isSuccess = Transaksi.DeleteAllTransaksi();
 
-            String customerName = JOptionPane.showInputDialog(this, "Masukkan Nama Pelanggan:", "Input Pelanggan", JOptionPane.PLAIN_MESSAGE);
-            if (customerName == null) {
-                return;
-            }
-
-            // Panggil Model untuk memproses transaksi
-            long newPurchaseId = TransaksiDetail.finalisasiTransaksi(this.userIdKasir, customerName, this.totalHargaKeseluruhan, this.itemsUntukBayar);
-
-            if (newPurchaseId != -1) {
-                // Setelah berhasil, update label
-                labelTransaksi.setText(String.valueOf(newPurchaseId));
-                double kembalian = uangBayar - this.totalHargaKeseluruhan;
-
-                // Tampilkan struk. Program akan berhenti sampai user klik OK.
-                tampilkanStruk(newPurchaseId, uangBayar, kembalian, customerName);
+            if (isSuccess) {
+                JOptionPane.showMessageDialog(this, "Semua riwayat transaksi berhasil dihapus.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                // refresh tabel riwayat
                 loadRiwayatPemasukan();
-                resetForm();
-
             } else {
-                JOptionPane.showMessageDialog(this, "Gagal menyimpan transaksi di database!", "Error Database", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Gagal menghapus semua riwayat transaksi.", "Error", JOptionPane.ERROR_MESSAGE);
             }
-
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Input uang bayar tidak valid! Harap masukkan hanya angka.", "Error Input", JOptionPane.ERROR_MESSAGE);
         }
-    }//GEN-LAST:event_BTotalActionPerformed
+    }//GEN-LAST:event_deleteAllActionPerformed
 
     /**
      * @param args the command line arguments
@@ -338,72 +399,22 @@ public class TransaksiView extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(TransaksiView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(Transaksiviews.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(TransaksiView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(Transaksiviews.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(TransaksiView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(Transaksiviews.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(TransaksiView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(Transaksiviews.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-        //</editor-fold>
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-//                new TransaksiView().setVisible(true);
+//                new Transaksiviews().setVisible(true);
             }
         });
-    }
-
-    private void tampilkanStruk(long purchaseId, double uangBayar, double kembalian, String customerName) {
-        StringBuilder strukText = new StringBuilder();
-        strukText.append("        *** STRUK PEMBELIAN ***\n\n");
-        strukText.append("ID Transaksi : ").append(purchaseId).append("\n");
-        strukText.append("Pelanggan    : ").append(customerName).append("\n");
-        strukText.append("Kasir ID     : ").append(this.userIdKasir).append("\n");
-        strukText.append("=======================================\n");
-
-        for (Object[] item : this.itemsUntukBayar) {
-            // item: {idItem, kodeBuku, judul, harga, jumlah, subtotal}
-            String judul = (String) item[2];
-            int jumlah = (Integer) item[4];
-            double subtotal = (Double) item[5];
-            strukText.append(String.format("%-25s %2d x %,.0f\n", judul, jumlah, subtotal / jumlah));
-        }
-
-        strukText.append("=======================================\n");
-        strukText.append(String.format("Total     : Rp %,.2f\n", this.totalHargaKeseluruhan));
-        strukText.append(String.format("Bayar     : Rp %,.2f\n", uangBayar));
-        strukText.append(String.format("Kembalian : Rp %,.2f\n\n", kembalian));
-        strukText.append("      --- Terima Kasih ---");
-
-        JTextArea textArea = new JTextArea(strukText.toString());
-        textArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
-        textArea.setEditable(false);
-        JOptionPane.showMessageDialog(this, textArea, "Struk Pembelian", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void loadRiwayatPemasukan() {
-        tabelPemasukan.setModel(TransaksiDetail.getRiwayatPemasukan());
-    }
-
-    private void resetForm() {
-        // Kosongkan list item yang mau dibayar
-        this.itemsUntukBayar.clear();
-        this.totalHargaKeseluruhan = 0.0;
-
-        // Kosongkan tabel pesanan
-        DefaultTableModel model = (DefaultTableModel) tabelPesanan.getModel();
-        model.setRowCount(0);
-
-        // mengosongkan field input
-        Ttotal.setText("Rp 0.00");
-        TUangMasuk.setText("");
-
-        // Nonaktifkan tombol bayar karena sudah tidak ada yang bisa dibayar
-        BTotal.setEnabled(false);
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

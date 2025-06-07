@@ -13,7 +13,6 @@ import java.sql.*;
 import javax.swing.table.DefaultTableModel;
 import model.Koneksi;
 import model.Transaksi;
-import model.TransaksiDetail;
 import model.User;
 
 public class KasirView extends javax.swing.JFrame {
@@ -26,11 +25,15 @@ public class KasirView extends javax.swing.JFrame {
      */
     public KasirView(User user) {
         initComponents();
-        this.userKasir = user;
-        isiComboBoxBuku();
+        this.userKasir = user; // Simpan user yang login
+
+        // Atur tampilan awal
         TTransaksi.setEditable(false);
         TJudul.setEditable(false);
         THarga.setEditable(false);
+
+        // Panggil method setup
+        isiComboBoxBuku();
         SetJumlahBuku();
         initTableModel();
         initForm();
@@ -111,14 +114,8 @@ public class KasirView extends javax.swing.JFrame {
     }
 
     private void initTableModel() {
-        // Ambil data dari DB
-        String[][] data = Transaksi.getRiwayatTransaksi();
-
-        // Nama kolom
-        String[] columnNames = {"Id Transaksi", "Kode Buku", "Judul", "Harga", "Jumlah", "Total"};
-
-        // Set model langsung ke JTable
-        DefaultTableModel model = new DefaultTableModel(data, columnNames);
+        // Ambil data dari db
+        DefaultTableModel model = Transaksi.getKeranjangSaatIni();
         TabelKasir.setModel(model);
 
     }
@@ -172,7 +169,7 @@ public class KasirView extends javax.swing.JFrame {
 
         jLabel2.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
         jLabel2.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel2.setText("id_traksaksi");
+        jLabel2.setText("id_item");
 
         TTransaksi.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.RAISED));
         TTransaksi.setCaretColor(new java.awt.Color(255, 255, 255));
@@ -242,7 +239,7 @@ public class KasirView extends javax.swing.JFrame {
                 {null, null, null, null}
             },
             new String [] {
-                "Id_transaksi", "Judul", "Jumlah", "Total"
+                "id_item", "Judul", "Jumlah", "Total"
             }
         ));
         TabelKasir.setSelectionBackground(new java.awt.Color(0, 204, 153));
@@ -552,144 +549,36 @@ public class KasirView extends javax.swing.JFrame {
     private void BTambahActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BTambahActionPerformed
 
         try {
-            // Validasi ID Transaksi
-            String idTransaksiStr = TTransaksi.getText() != null ? TTransaksi.getText().trim() : "";
-            System.out.println("ID Transaksi dari form: " + idTransaksiStr);
-            if (idTransaksiStr.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "ID Transaksi tidak boleh kosong.");
-                return;
-            }
-            int idTransaksi;
-            try {
-                idTransaksi = Integer.parseInt(idTransaksiStr);
-            } catch (NumberFormatException e) {
-                System.out.println("Error: ID Transaksi tidak valid: " + idTransaksiStr);
-                JOptionPane.showMessageDialog(null, "ID Transaksi harus berupa angka.");
-                return;
-            }
-
-            // Validasi Kode Buku (CBuku)
-            Object selectedItem = CBuku.getSelectedItem();
-            if (selectedItem == null) {
-                System.out.println("Error: Kode Buku tidak dipilih.");
-                JOptionPane.showMessageDialog(null, "Kode Buku tidak boleh kosong.");
-                return;
-            }
-            String bookId = selectedItem.toString().trim();
-            System.out.println("Kode Buku dari CBuku: " + bookId);
-            if (bookId.isEmpty()) {
-                System.out.println("Error: Kode Buku kosong setelah trim.");
-                JOptionPane.showMessageDialog(null, "Kode Buku tidak boleh kosong.");
-                return;
-            }
-
-            // Validasi Harga (diambil dari THarga, diasumsikan sudah diisi dari books)
-            String hargaStr = THarga.getText() != null ? THarga.getText().trim() : "";
-            System.out.println("Harga dari form: " + hargaStr);
-            if (hargaStr.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Harga tidak boleh kosong.");
-                return;
-            }
-            double harga;
-            try {
-                harga = Double.parseDouble(hargaStr);
-            } catch (NumberFormatException e) {
-                System.out.println("Error: Harga tidak valid: " + hargaStr);
-                JOptionPane.showMessageDialog(null, "Harga harus berupa angka.");
-                return;
-            }
-
-            // Validasi Jumlah
+            int idTransaksi = Integer.parseInt(TTransaksi.getText().trim());
+            int bookId = Integer.parseInt(CBuku.getSelectedItem().toString().trim());
+            double harga = Double.parseDouble(THarga.getText().trim());
             int jumlah = (Integer) SJumlah.getValue();
-            System.out.println("Jumlah dari SJumlah: " + jumlah);
+
             if (jumlah <= 0) {
-                JOptionPane.showMessageDialog(null, "Jumlah harus lebih dari 0.");
+                JOptionPane.showMessageDialog(this, "Jumlah harus lebih dari 0.");
                 return;
             }
 
-            // Hitung Subtotal
-            double subtotal = harga * jumlah;
-            System.out.println("Subtotal yang dihitung: " + subtotal);
+            String hasil = Transaksi.tambahItemKeKeranjang(idTransaksi, bookId, jumlah, harga);
 
-            // Simpan ke database
-            Connection conn = Koneksi.getConnection();
-            if (conn == null) {
-                System.out.println("Error: Koneksi database gagal.");
-                JOptionPane.showMessageDialog(null, "Gagal terhubung ke database.");
-                return;
-            }
-
-            // Cek apakah purchase_item_id sudah ada
-            String checkSql = "SELECT COUNT(*) FROM purchase_items WHERE purchase_item_id = ?";
-            PreparedStatement checkPs = conn.prepareStatement(checkSql);
-            checkPs.setInt(1, idTransaksi);
-            ResultSet rs = checkPs.executeQuery();
-            boolean idExists = false;
-            if (rs.next()) {
-                idExists = rs.getInt(1) > 0;
-            }
-            rs.close();
-            checkPs.close();
-
-            String sql;
-            PreparedStatement ps;
-            if (idExists) {
-                // UPDATE dengan kolom yang ada, asumsikan harga diganti dengan nilai dari THarga
-                sql = "UPDATE purchase_items SET book_id = ?, quantity = ?, subtotal = ? WHERE purchase_item_id = ?";
-                ps = conn.prepareStatement(sql);
-                ps.setString(1, bookId);
-                ps.setInt(2, jumlah);
-                ps.setDouble(3, subtotal);
-                ps.setInt(4, idTransaksi);
+            if (hasil.equals("OK")) {
+                JOptionPane.showMessageDialog(this, "Item berhasil ditambahkan ke keranjang.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                initTableModel();
+                initForm();
             } else {
-                // INSERT dengan kolom yang ada, tanpa price
-                sql = "INSERT INTO purchase_items (purchase_item_id, book_id, quantity, subtotal) VALUES (?, ?, ?, ?)";
-                ps = conn.prepareStatement(sql);
-                ps.setInt(1, idTransaksi);
-                ps.setString(2, bookId);
-                ps.setInt(3, jumlah);
-                ps.setDouble(4, subtotal);
-            }
-
-            int rowsAffected = ps.executeUpdate();
-            if (rowsAffected > 0) {
-                System.out.println("Berhasil menyimpan ");
-                JOptionPane.showMessageDialog(null, "Data transaksi berhasil ditambahkan.");
-                initTableModel(); // Perbarui tabel setelah penyimpanan
-                // Perbarui TTransaksi dengan next ID
-                String nextIdSql = "SELECT MAX(purchase_item_id) AS max_id FROM purchase_items";
-                PreparedStatement nextPs = conn.prepareStatement(nextIdSql);
-                ResultSet nextRs = nextPs.executeQuery();
-                int nextId = idTransaksi; // Default ke ID saat ini
-                if (nextRs.next()) {
-                    int maxId = nextRs.getInt("max_id");
-                    nextId = maxId + 1;
-                }
-                TTransaksi.setText(String.valueOf(nextId));
-                System.out.println("TTransaksi diperbarui ke next ID: " + nextId);
-                nextRs.close();
-                nextPs.close();
-            } else {
-                System.out.println("Tidak ada baris yang dipengaruhi.");
-                JOptionPane.showMessageDialog(null, "Gagal menyimpan data transaksi.");
-            }
-
-            ps.close();
-            if (conn != null) {
-                conn.close();
+                JOptionPane.showMessageDialog(this, hasil, "Error", JOptionPane.ERROR_MESSAGE);
             }
 
         } catch (Exception e) {
-            System.out.println("Error saat menyimpan data: " + e.getMessage());
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Input tidak valid atau terjadi error.", "Input Error", JOptionPane.ERROR_MESSAGE);
         }
+
     }//GEN-LAST:event_BTambahActionPerformed
 
     private void BBayarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BBayarActionPerformed
         DefaultTableModel model = (DefaultTableModel) TabelKasir.getModel();
         if (model.getRowCount() == 0) {
-            JOptionPane.showMessageDialog(this, "Keranjang belanja masih kosong!", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Keranjang belanja kosong!");
             return;
         }
 
@@ -697,24 +586,21 @@ public class KasirView extends javax.swing.JFrame {
         double totalHargaKeseluruhan = 0;
 
         for (int i = 0; i < model.getRowCount(); i++) {
-            Object idItem = model.getValueAt(i, 0);
-            Object kodeBuku = model.getValueAt(i, 1);
-            String judul = model.getValueAt(i, 2).toString();
-            double harga = Double.parseDouble(model.getValueAt(i, 3).toString());
-            int jumlah = Integer.parseInt(model.getValueAt(i, 4).toString());
-            double subtotal = Double.parseDouble(model.getValueAt(i, 5).toString());
-            
-            Object[] item = new Object[]{idItem, kodeBuku, judul, harga, jumlah, subtotal};
-            itemsUntukKirim.add(item);
-            totalHargaKeseluruhan += subtotal;
+            Object[] rowData = new Object[6];
+            for (int j = 0; j < 6; j++) {
+                rowData[j] = model.getValueAt(i, j);
+            }
+            itemsUntukKirim.add(rowData);
+            totalHargaKeseluruhan += Double.parseDouble(rowData[5].toString());
         }
 
         int userIdKasir = this.userKasir.getUserId();
-        
-         TransaksiView transaksiView = new TransaksiView(itemsUntukKirim, totalHargaKeseluruhan, userIdKasir, this.userKasir); 
+
+        // Kirim semua data TERMASUK 'userKasir' agar bisa kembali ke menu
+        Transaksiviews transaksiView = new Transaksiviews(itemsUntukKirim, totalHargaKeseluruhan, userIdKasir, this.userKasir);
         transaksiView.setVisible(true);
 
-        // Tutup jendela kasir
+        // Hancurkan jendela KasirView saat ini
 //        this.dispose();
 
     }//GEN-LAST:event_BBayarActionPerformed
@@ -723,104 +609,34 @@ public class KasirView extends javax.swing.JFrame {
         // TODO add your handling code here:                                    
         try {
             // Validasi ID Transaksi
-            String idTransaksiStr = TTransaksi.getText() != null ? TTransaksi.getText().trim() : "";
-            System.out.println("ID Transaksi dari form: " + idTransaksiStr);
-            if (idTransaksiStr.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "ID Transaksi tidak boleh kosong.");
-                return;
-            }
-            int idTransaksi;
-            try {
-                idTransaksi = Integer.parseInt(idTransaksiStr);
-            } catch (NumberFormatException e) {
-                System.out.println("Error: ID Transaksi tidak valid: " + idTransaksiStr);
-                JOptionPane.showMessageDialog(null, "ID Transaksi harus berupa angka.");
+            if (TabelKasir.getSelectedRow() == -1) {
+                JOptionPane.showMessageDialog(this, "Pilih item di tabel yang ingin diedit terlebih dahulu.", "Peringatan", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            // Validasi Kode Buku (CBuku)
-            Object selectedItem = CBuku.getSelectedItem();
-            if (selectedItem == null) {
-                System.out.println("Error: Kode Buku tidak dipilih.");
-                JOptionPane.showMessageDialog(null, "Kode Buku tidak boleh kosong.");
-                return;
-            }
-            String bookId = selectedItem.toString().trim();
-            System.out.println("Kode Buku dari CBuku: " + bookId);
-            if (bookId.isEmpty()) {
-                System.out.println("Error: Kode Buku kosong setelah trim.");
-                JOptionPane.showMessageDialog(null, "Kode Buku tidak boleh kosong.");
+            // ambil data dari form
+            int idItem = Integer.parseInt(TTransaksi.getText().trim());
+            int bookId = Integer.parseInt(CBuku.getSelectedItem().toString().trim());
+            double harga = Double.parseDouble(THarga.getText().trim());
+            int jumlahBaru = (Integer) SJumlah.getValue();
+
+            // validasi dasar
+            if (jumlahBaru <= 0) {
+                JOptionPane.showMessageDialog(this, "Jumlah harus lebih dari 0.");
                 return;
             }
 
-            // Validasi Harga
-            String hargaStr = THarga.getText() != null ? THarga.getText().trim() : "";
-            System.out.println("Harga dari form: " + hargaStr);
-            if (hargaStr.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Harga tidak boleh kosong.");
-                return;
-            }
-            double harga;
-            try {
-                harga = Double.parseDouble(hargaStr);
-            } catch (NumberFormatException e) {
-                System.out.println("Error: Harga tidak valid: " + hargaStr);
-                JOptionPane.showMessageDialog(null, "Harga harus berupa angka.");
-                return;
-            }
+            String hasil = Transaksi.editItemDiKeranjang(idItem, bookId, jumlahBaru, harga);
 
-            // Validasi Jumlah
-            int jumlah = (Integer) SJumlah.getValue();
-            System.out.println("Jumlah dari SJumlah: " + jumlah);
-            if (jumlah <= 0) {
-                JOptionPane.showMessageDialog(null, "Jumlah harus lebih dari 0.");
-                return;
-            }
-
-            // Hitung Total
-            double total = harga * jumlah;
-            System.out.println("Total yang dihitung: " + total);
-
-            // Simpan ke database
-            Connection conn = Koneksi.getConnection();
-            if (conn == null) {
-                System.out.println("Error: Koneksi database gagal.");
-                JOptionPane.showMessageDialog(null, "Gagal terhubung ke database.");
-                return;
-            }
-
-            String sql = "UPDATE purchase_items SET book_id = ?, quantity = ?, subtotal = ? "
-                    + "WHERE purchase_item_id = ?";
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setString(1, bookId);
-            ps.setInt(2, jumlah);
-            ps.setDouble(3, total);
-            ps.setInt(4, idTransaksi);
-
-            System.out.println("Menjalankan query: " + sql);
-            System.out.println("Parameter: book_id=" + bookId + ", price=" + harga
-                    + ", quantity=" + jumlah + ", total_amount=" + total
-                    + ", purchase_item_id=" + idTransaksi);
-
-            int rowsAffected = ps.executeUpdate();
-            if (rowsAffected > 0) {
-                System.out.println("Berhasil memperbarui " + rowsAffected + " baris.");
-                JOptionPane.showMessageDialog(null, "Data transaksi berhasil diperbarui.");
-                initTableModel(); // Perbarui tabel setelah pembaruan
+            if (hasil.equals("OK")) {
+                JOptionPane.showMessageDialog(this, "Item berhasil di-edit.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                initTableModel();
             } else {
-                System.out.println("Tidak ada baris yang diperbarui. Mungkin purchase_item_id tidak ditemukan.");
-                JOptionPane.showMessageDialog(null, "Gagal memperbarui data transaksi. ID Transaksi tidak ditemukan.");
+                JOptionPane.showMessageDialog(this, hasil, "Gagal Mengedit", JOptionPane.ERROR_MESSAGE);
             }
 
-            ps.close();
-            if (conn != null) {
-                conn.close();
-            }
-
-        } catch (Exception e) {
-            System.out.println("Error saat memperbarui data: " + e.getMessage());
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Pastikan input angka (ID, Harga) valid dan item sudah dipilih dari tabel.", "Input Tidak Valid", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_BEditActionPerformed
 
@@ -925,7 +741,7 @@ public class KasirView extends javax.swing.JFrame {
             String subtotalStr = model.getValueAt(row, 5) != null ? model.getValueAt(row, 5).toString() : "";
             double subtotal = Double.parseDouble(subtotalStr);
 
-            System.out.println("Data dari tabel: id_transaksi=" + id_transaksi + ", book_id=" + bookId
+            System.out.println("Data dari tabel: id_item=" + id_transaksi + ", book_id=" + bookId
                     + ", judul=" + judul + ", price=" + price + ", quantity=" + quantity
                     + ", subtotal=" + subtotal);
 
