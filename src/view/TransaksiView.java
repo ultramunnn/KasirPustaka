@@ -4,18 +4,60 @@
  */
 package view;
 
+import java.util.List;
+
 /**
  *
  * @author HP
  */
+import java.util.List;
+import javax.swing.JOptionPane;
+import javax.swing.JTextArea;
+import javax.swing.table.DefaultTableModel;
+import model.TransaksiDetail;
+import model.User;
+
 public class TransaksiView extends javax.swing.JFrame {
 
     /**
      * Creates new form DetailTransaksi
      */
-    public TransaksiView() {
+    // Variabel untuk menyimpan data yang dikirim dari KasirView
+    private List<Object[]> itemsUntukBayar;
+    private double totalHargaKeseluruhan;
+    private int userIdKasir;
+    private User userUntukKembali;
+
+    public TransaksiView(List<Object[]> itemsTransaksi, double totalKeseluruhan, int userId, User user) {
         initComponents();
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         Ttotal.setEditable(false);
+
+        //this.purchaseId = purchaseId;
+        this.userUntukKembali = user;
+        this.itemsUntukBayar = itemsTransaksi;
+        this.totalHargaKeseluruhan = totalKeseluruhan;
+        this.userIdKasir = userId;
+
+        labelTransaksi.setText("");
+
+        tampilkanDataPesanan();
+        loadRiwayatPemasukan();
+    }
+
+    private void tampilkanDataPesanan() {
+        Ttotal.setText(String.format("Rp %,.2f", this.totalHargaKeseluruhan));
+
+        String[] columnNames = {"ID Item", "Judul", "Jumlah", "Subtotal"};
+        DefaultTableModel model = new DefaultTableModel(null, columnNames);
+
+        for (Object[] item : itemsUntukBayar) {
+            model.addRow(new Object[]{
+                item[0], item[2], item[4], String.format("Rp %,.2f", (Double) item[5])
+            });
+        }
+        tabelPesanan.setModel(model);
     }
 
     /**
@@ -30,37 +72,46 @@ public class TransaksiView extends javax.swing.JFrame {
         jPanel1 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         jLabel2 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
+        labelTransaksi = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        tabelPesanan = new javax.swing.JTable();
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
-        jButton1 = new javax.swing.JButton();
+        BTotal = new javax.swing.JButton();
         jScrollPane2 = new javax.swing.JScrollPane();
-        jTable2 = new javax.swing.JTable();
-        jButton4 = new javax.swing.JButton();
-        jButton5 = new javax.swing.JButton();
+        tabelPemasukan = new javax.swing.JTable();
+        delete = new javax.swing.JButton();
+        deleteAll = new javax.swing.JButton();
         Ttotal = new javax.swing.JTextField();
-        jTextField2 = new javax.swing.JTextField();
+        TUangMasuk = new javax.swing.JTextField();
+        jLabel3 = new javax.swing.JLabel();
+        jLabel6 = new javax.swing.JLabel();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
         jPanel1.setBackground(new java.awt.Color(0, 204, 153));
+        jPanel1.setLayout(null);
 
         jLabel1.setFont(new java.awt.Font("Century Gothic", 3, 20)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(255, 255, 255));
         jLabel1.setText("Transaksi Buku");
+        jPanel1.add(jLabel1);
+        jLabel1.setBounds(171, 30, 141, 26);
 
         jLabel2.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
         jLabel2.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel2.setText("id_traksaksi:");
+        jLabel2.setText("id_transaksiAll:");
+        jPanel1.add(jLabel2);
+        jLabel2.setBounds(31, 64, 110, 20);
 
-        jLabel3.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
-        jLabel3.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel3.setText("jLabel3");
+        labelTransaksi.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
+        labelTransaksi.setForeground(new java.awt.Color(255, 255, 255));
+        labelTransaksi.setText("jLabel3");
+        jPanel1.add(labelTransaksi);
+        labelTransaksi.setBounds(135, 68, 43, 16);
 
-        jTable1.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+        tabelPesanan.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
+        tabelPesanan.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null},
                 {null, null, null, null},
@@ -71,29 +122,38 @@ public class TransaksiView extends javax.swing.JFrame {
                 "Title 1", "Title 2", "Title 3", "Title 4"
             }
         ));
-        jTable1.setSelectionBackground(new java.awt.Color(0, 204, 153));
-        jTable1.setSelectionForeground(new java.awt.Color(255, 255, 255));
-        jTable1.setShowGrid(true);
-        jScrollPane1.setViewportView(jTable1);
+        tabelPesanan.setSelectionBackground(new java.awt.Color(0, 204, 153));
+        tabelPesanan.setSelectionForeground(new java.awt.Color(255, 255, 255));
+        tabelPesanan.setShowGrid(true);
+        jScrollPane1.setViewportView(tabelPesanan);
+
+        jPanel1.add(jScrollPane1);
+        jScrollPane1.setBounds(31, 96, 436, 74);
 
         jLabel4.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
         jLabel4.setForeground(new java.awt.Color(255, 255, 255));
         jLabel4.setText("Total Harga");
+        jPanel1.add(jLabel4);
+        jLabel4.setBounds(31, 193, 68, 16);
 
         jLabel5.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
         jLabel5.setForeground(new java.awt.Color(255, 255, 255));
         jLabel5.setText("Masukan Uang");
+        jPanel1.add(jLabel5);
+        jLabel5.setBounds(30, 220, 86, 16);
 
-        jButton1.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
-        jButton1.setText("Bayar");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        BTotal.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
+        BTotal.setText("Bayar");
+        BTotal.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                BTotalActionPerformed(evt);
             }
         });
+        jPanel1.add(BTotal);
+        BTotal.setBounds(130, 250, 72, 23);
 
-        jTable2.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
-        jTable2.setModel(new javax.swing.table.DefaultTableModel(
+        tabelPemasukan.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
+        tabelPemasukan.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null},
                 {null, null, null, null},
@@ -104,89 +164,47 @@ public class TransaksiView extends javax.swing.JFrame {
                 "Title 1", "Title 2", "Title 3", "Title 4"
             }
         ));
-        jTable2.setSelectionBackground(new java.awt.Color(0, 204, 153));
-        jTable2.setSelectionForeground(new java.awt.Color(255, 255, 255));
-        jTable2.setShowGrid(true);
-        jScrollPane2.setViewportView(jTable2);
+        tabelPemasukan.setSelectionBackground(new java.awt.Color(0, 204, 153));
+        tabelPemasukan.setSelectionForeground(new java.awt.Color(255, 255, 255));
+        tabelPemasukan.setShowGrid(true);
+        jScrollPane2.setViewportView(tabelPemasukan);
 
-        jButton4.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
-        jButton4.setText("Delete");
-        jButton4.addActionListener(new java.awt.event.ActionListener() {
+        jPanel1.add(jScrollPane2);
+        jScrollPane2.setBounds(30, 310, 436, 74);
+
+        delete.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
+        delete.setText("Delete");
+        delete.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton4ActionPerformed(evt);
+                deleteActionPerformed(evt);
             }
         });
+        jPanel1.add(delete);
+        delete.setBounds(30, 400, 72, 23);
 
-        jButton5.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
-        jButton5.setText("Delete All");
-        jButton5.addActionListener(new java.awt.event.ActionListener() {
+        deleteAll.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
+        deleteAll.setText("Delete All");
+        deleteAll.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton5ActionPerformed(evt);
+                deleteAllActionPerformed(evt);
             }
         });
+        jPanel1.add(deleteAll);
+        deleteAll.setBounds(110, 400, 89, 23);
+        jPanel1.add(Ttotal);
+        Ttotal.setBounds(130, 190, 140, 22);
+        jPanel1.add(TUangMasuk);
+        TUangMasuk.setBounds(130, 220, 140, 22);
 
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(31, 31, 31)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 436, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel2)
-                                .addGap(34, 34, 34)
-                                .addComponent(jLabel3))
-                            .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 436, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jButton4)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jButton5))
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jLabel5)
-                                    .addComponent(jLabel4))
-                                .addGap(18, 18, 18)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jButton1)
-                                    .addComponent(Ttotal, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)))))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(171, 171, 171)
-                        .addComponent(jLabel1)))
-                .addContainerGap(39, Short.MAX_VALUE))
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(30, 30, 30)
-                .addComponent(jLabel1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel2)
-                    .addComponent(jLabel3))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(26, 26, 26)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel4)
-                    .addComponent(Ttotal, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(10, 10, 10)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel5)
-                    .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(10, 10, 10)
-                .addComponent(jButton1)
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton4)
-                    .addComponent(jButton5))
-                .addContainerGap(26, Short.MAX_VALUE))
-        );
+        jLabel3.setFont(new java.awt.Font("Century Gothic", 0, 12)); // NOI18N
+        jLabel3.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel3.setText("Riwayat Transaksi");
+        jPanel1.add(jLabel3);
+        jLabel3.setBounds(30, 290, 101, 16);
+
+        jLabel6.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/icon2.png"))); // NOI18N
+        jPanel1.add(jLabel6);
+        jLabel6.setBounds(360, 180, 110, 120);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -196,23 +214,112 @@ public class TransaksiView extends javax.swing.JFrame {
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 482, javax.swing.GroupLayout.PREFERRED_SIZE)
         );
 
-        pack();
+        setSize(new java.awt.Dimension(556, 490));
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton1ActionPerformed
+    private void deleteAllActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteAllActionPerformed
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "PERINGATAN: Ini akan menghapus SEMUA RIWAYAT TRANSAKSI secara permanen.\nApakah Anda benar-benar yakin?",
+                "Konfirmasi Hapus Semua",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
 
-    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton4ActionPerformed
+        if (confirm == JOptionPane.YES_OPTION) {
+            // panggil method hapus semua dari Model
+            boolean isSuccess = TransaksiDetail.hapusSemuaTransaksi();
 
-    private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jButton5ActionPerformed
+            if (isSuccess) {
+                JOptionPane.showMessageDialog(this, "Semua riwayat transaksi berhasil dihapus.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                // refresh tabel riwayat
+                loadRiwayatPemasukan();
+            } else {
+                JOptionPane.showMessageDialog(this, "Gagal menghapus semua riwayat transaksi.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }//GEN-LAST:event_deleteAllActionPerformed
+
+    private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
+        int selectedRow = tabelPemasukan.getSelectedRow();
+
+        //jik tidak ada baris yang dipilih, beri peringatan
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Silakan pilih transaksi yang akan dihapus dari tabel riwayat.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        //ambik id transaksi dari baris yang dipilih (ada di kolom pertama, indeks 0)
+        long purchaseIdToDelete = Long.parseLong(tabelPemasukan.getValueAt(selectedRow, 0).toString());
+
+        // konfirm ke user
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Apakah Anda yakin ingin menghapus transaksi dengan ID " + purchaseIdToDelete + "?",
+                "Konfirmasi Hapus",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+
+        //jika user "Yes"
+        if (confirm == JOptionPane.YES_OPTION) {
+            // Panggil method hapus dari Model
+            boolean isSuccess = TransaksiDetail.hapusSatuTransaksi(purchaseIdToDelete);
+
+            if (isSuccess) {
+                JOptionPane.showMessageDialog(this, "Transaksi berhasil dihapus.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                //refresh tabel riwayat untuk menampilkan data terbaru
+                loadRiwayatPemasukan();
+            } else {
+                JOptionPane.showMessageDialog(this, "Gagal menghapus transaksi dari database.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }//GEN-LAST:event_deleteActionPerformed
+
+    private void BTotalActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BTotalActionPerformed
+        String uangMasukStr = TUangMasuk.getText().trim();
+        if (uangMasukStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Masukkan jumlah uang yang dibayar!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            double uangBayar = Double.parseDouble(uangMasukStr);
+            if (uangBayar < this.totalHargaKeseluruhan) {
+                JOptionPane.showMessageDialog(this, "Uang yang dibayar kurang!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String customerName = JOptionPane.showInputDialog(this, "Masukkan Nama Pelanggan:", "Input Pelanggan", JOptionPane.PLAIN_MESSAGE);
+            if (customerName == null) {
+                return;
+            }
+
+            // Panggil Model untuk memproses transaksi
+            long newPurchaseId = TransaksiDetail.finalisasiTransaksi(this.userIdKasir, customerName, this.totalHargaKeseluruhan, this.itemsUntukBayar);
+
+            if (newPurchaseId != -1) {
+                // Setelah berhasil, update label
+                labelTransaksi.setText(String.valueOf(newPurchaseId));
+                double kembalian = uangBayar - this.totalHargaKeseluruhan;
+
+                // Tampilkan struk. Program akan berhenti sampai user klik OK.
+                tampilkanStruk(newPurchaseId, uangBayar, kembalian, customerName);
+                loadRiwayatPemasukan();
+                resetForm();
+
+            } else {
+                JOptionPane.showMessageDialog(this, "Gagal menyimpan transaksi di database!", "Error Database", JOptionPane.ERROR_MESSAGE);
+            }
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Input uang bayar tidak valid! Harap masukkan hanya angka.", "Error Input", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_BTotalActionPerformed
 
     /**
      * @param args the command line arguments
@@ -245,26 +352,77 @@ public class TransaksiView extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new TransaksiView().setVisible(true);
+//                new TransaksiView().setVisible(true);
             }
         });
     }
 
+    private void tampilkanStruk(long purchaseId, double uangBayar, double kembalian, String customerName) {
+        StringBuilder strukText = new StringBuilder();
+        strukText.append("        *** STRUK PEMBELIAN ***\n\n");
+        strukText.append("ID Transaksi : ").append(purchaseId).append("\n");
+        strukText.append("Pelanggan    : ").append(customerName).append("\n");
+        strukText.append("Kasir ID     : ").append(this.userIdKasir).append("\n");
+        strukText.append("=======================================\n");
+
+        for (Object[] item : this.itemsUntukBayar) {
+            // item: {idItem, kodeBuku, judul, harga, jumlah, subtotal}
+            String judul = (String) item[2];
+            int jumlah = (Integer) item[4];
+            double subtotal = (Double) item[5];
+            strukText.append(String.format("%-25s %2d x %,.0f\n", judul, jumlah, subtotal / jumlah));
+        }
+
+        strukText.append("=======================================\n");
+        strukText.append(String.format("Total     : Rp %,.2f\n", this.totalHargaKeseluruhan));
+        strukText.append(String.format("Bayar     : Rp %,.2f\n", uangBayar));
+        strukText.append(String.format("Kembalian : Rp %,.2f\n\n", kembalian));
+        strukText.append("      --- Terima Kasih ---");
+
+        JTextArea textArea = new JTextArea(strukText.toString());
+        textArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
+        textArea.setEditable(false);
+        JOptionPane.showMessageDialog(this, textArea, "Struk Pembelian", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void loadRiwayatPemasukan() {
+        tabelPemasukan.setModel(TransaksiDetail.getRiwayatPemasukan());
+    }
+
+    private void resetForm() {
+        // Kosongkan list item yang mau dibayar
+        this.itemsUntukBayar.clear();
+        this.totalHargaKeseluruhan = 0.0;
+
+        // Kosongkan tabel pesanan
+        DefaultTableModel model = (DefaultTableModel) tabelPesanan.getModel();
+        model.setRowCount(0);
+
+        // mengosongkan field input
+        Ttotal.setText("Rp 0.00");
+        TUangMasuk.setText("");
+
+        // Nonaktifkan tombol bayar karena sudah tidak ada yang bisa dibayar
+        BTotal.setEnabled(false);
+    }
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton BTotal;
+    private javax.swing.JTextField TUangMasuk;
     private javax.swing.JTextField Ttotal;
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton4;
-    private javax.swing.JButton jButton5;
+    private javax.swing.JButton delete;
+    private javax.swing.JButton deleteAll;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
-    private javax.swing.JTable jTable1;
-    private javax.swing.JTable jTable2;
-    private javax.swing.JTextField jTextField2;
+    private javax.swing.JLabel labelTransaksi;
+    private javax.swing.JTable tabelPemasukan;
+    private javax.swing.JTable tabelPesanan;
     // End of variables declaration//GEN-END:variables
 }

@@ -4,18 +4,27 @@ package view;
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-
 /**
  *
  * @author HP
  */
+import model.User;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
+
 public class MenuView extends javax.swing.JFrame {
+
+    private User userYangLogin;
 
     /**
      * Creates new form MenuView
      */
-    public MenuView() {
+    public MenuView(User user) {
         initComponents();
+        this.setLocationRelativeTo(null);
+        this.userYangLogin = user;
     }
 
     /**
@@ -28,23 +37,32 @@ public class MenuView extends javax.swing.JFrame {
     private void initComponents() {
 
         jPanel2 = new javax.swing.JPanel();
+        jLabel2 = new javax.swing.JLabel();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenuKasirBuku = new javax.swing.JMenu();
         jMenuTambahBuku = new javax.swing.JMenu();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
         jPanel2.setBackground(new java.awt.Color(0, 204, 153));
+
+        jLabel2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/icon.png"))); // NOI18N
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 400, Short.MAX_VALUE)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGap(50, 50, 50)
+                .addComponent(jLabel2)
+                .addContainerGap(56, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 272, Short.MAX_VALUE)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGap(44, 44, 44)
+                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 366, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(67, Short.MAX_VALUE))
         );
 
         jMenuBar1.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.RAISED));
@@ -82,20 +100,21 @@ public class MenuView extends javax.swing.JFrame {
         );
 
         pack();
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
     private void jMenuKasirBukuMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jMenuKasirBukuMouseClicked
         // TODO add your handling code here:
-        KasirView db = new KasirView();
-      db.setLocationRelativeTo(this);
-      db.setVisible(true);
+        KasirView kasirView = new KasirView(this.userYangLogin);
+        kasirView.setLocationRelativeTo(this);
+        kasirView.setVisible(true);
     }//GEN-LAST:event_jMenuKasirBukuMouseClicked
 
     private void jMenuTambahBukuMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jMenuTambahBukuMouseClicked
         // TODO add your handling code here:
-        TambahBukuView db = new TambahBukuView();
-      db.setLocationRelativeTo(this);
-      db.setVisible(true);
+        TambahBukuView tambahBuku = new TambahBukuView();
+        tambahBuku.setLocationRelativeTo(this);
+        tambahBuku.setVisible(true);
     }//GEN-LAST:event_jMenuTambahBukuMouseClicked
 
     /**
@@ -128,12 +147,13 @@ public class MenuView extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new MenuView().setVisible(true);
+//                new LoginView().setVisible(true);
             }
         });
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JLabel jLabel2;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JMenu jMenuKasirBuku;
     private javax.swing.JMenu jMenuTambahBuku;

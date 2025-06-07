@@ -14,7 +14,7 @@ public class Koneksi {
     public static Connection getConnection(){
         try {
             //untuk MySQL versi 8.0+
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            Class.forName("com.mysql.jdbc.Driver");
             String url = "jdbc:mysql://localhost/bookselfappdb?useUnicode=true&characterEncoding=UTF-8&useSSL=false";
             String user = "root";
             String pass = "";
