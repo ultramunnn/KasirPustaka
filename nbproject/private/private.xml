@@ -5,8 +5,12 @@
         <group>
             <file>file:/D:/project/kampus/KasirPustaka/src/view/KasirView.java</file>
             <file>file:/D:/project/kampus/KasirPustaka/src/model/User.java</file>
-            <file>file:/D:/project/kampus/KasirPustaka/src/model/KategoriBuku.java</file>
-            <file>file:/D:/project/kampus/KasirPustaka/src/model/Koneksi.java</file>
+            <file>file:/D:/project/kampus/KasirPustaka/src/model/Transaksi.java</file>
+            <file>file:/D:/project/kampus/KasirPustaka/src/view/MenuView.java</file>
+            <file>file:/D:/project/kampus/KasirPustaka/src/model/Buku.java</file>
+            <file>file:/D:/project/kampus/KasirPustaka/src/view/TambahBukuView.java</file>
+            <file>file:/D:/project/kampus/KasirPustaka/src/view/Transaksiviews.java</file>
+            <file>file:/D:/project/kampus/KasirPustaka/src/view/LoginView.java</file>
         </group>
     </open-files>
 </project-private>

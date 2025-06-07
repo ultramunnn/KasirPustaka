@@ -1,1 +1,2 @@
 # KasirPustaka
+database: bookselfapp
