@@ -21,10 +21,9 @@ public class Transaksiviews extends javax.swing.JFrame {
     /**
      * Creates new form Transaksiviews
      */
-    private List<Object[]> itemsUntukBayar;
-    private double totalHargaKeseluruhan;
-    private int userIdKasir;
-    private User userUntukKembali;
+    private List<Object[]> itemsUntukBayar; //daftar barang yang akan dibayar
+    private double totalHargaKeseluruhan; // total harga dari semua barang
+    private int userIdKasir; //idkasir yang sedang login
 
 //    public Transaksiviews() {
 //        initComponents();
@@ -32,18 +31,17 @@ public class Transaksiviews extends javax.swing.JFrame {
     public Transaksiviews(List<Object[]> itemsTransaksi, double totalKeseluruhan, int userId, User user) {
         initComponents();
 
-        // Atur properti frame
+        // atur properti frame
         setLocationRelativeTo(null);
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         Ttotal.setEditable(false);
 
-        // Simpan data yang diterima
-        this.userUntukKembali = user;
+        // simpan data yang diterima
         this.itemsUntukBayar = itemsTransaksi;
         this.totalHargaKeseluruhan = totalKeseluruhan;
         this.userIdKasir = userId;
 
-        // Atur tampilan awal
+        // atur tampilan awal
         labelTransaksi.setText("[Menunggu Pembayaran]");
         tampilkanDataPesanan();
         loadRiwayatPemasukan();
@@ -63,12 +61,13 @@ public class Transaksiviews extends javax.swing.JFrame {
                 item[0], // Id Item
                 item[2], // Judul
                 item[4], // Jumlah
-                String.format("Rp %,.2f", subtotalDouble)
+                String.format("Rp %,.2f", subtotalDouble) //format subtotal agar rapi.
             });
         }
-        tabelPesanan.setModel(model);
+        tabelPesanan.setModel(model); /// set model yang sudah terisi ke JTable
     }
 
+    //memuat atau merefresh data pada tabel riwayat transaksi
     private void loadRiwayatPemasukan() {
         tabelPemasukan.setModel(Transaksi.getRiwayatPembelianModel());
     }
@@ -84,14 +83,13 @@ public class Transaksiviews extends javax.swing.JFrame {
     for (Object[] item : this.itemsUntukBayar) {
         // item: {idItem, kodeBuku, judul, harga, jumlah, subtotal}
         
-        // --- INI KODE YANG SUDAH DIPERBAIKI ---
         String judul = item[2].toString();
-        //parse String menjadi integer
+        //parse string menjadi integer
         int jumlah = Integer.parseInt(item[4].toString());
         //parse String menjadi double
         double subtotal = Double.parseDouble(item[5].toString());
         
-        // Hitung harga satuan dengan aman
+        // hitung harga satuan dengan aman
         double hargaSatuan = (jumlah > 0) ? subtotal / jumlah : 0;
         
         strukText.append(String.format("%-25s %2d x %,.0f\n", judul, jumlah, hargaSatuan));
@@ -101,7 +99,7 @@ public class Transaksiviews extends javax.swing.JFrame {
     strukText.append(String.format("Total     : Rp %,.2f\n", this.totalHargaKeseluruhan));
     strukText.append(String.format("Bayar     : Rp %,.2f\n", uangBayar));
     strukText.append(String.format("Kembalian : Rp %,.2f\n\n", kembalian));
-    strukText.append("      --- Terima Kasih ---");
+    strukText.append("      --- Terima Kasih ---  ");
 
     JTextArea textArea = new JTextArea(strukText.toString());
     textArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
@@ -120,6 +118,7 @@ public class Transaksiviews extends javax.swing.JFrame {
         DefaultTableModel model = (DefaultTableModel) tabelPesanan.getModel();
         model.setRowCount(0);
 
+        //set tombol bayar karena tidak ada transaksi
         Ttotal.setText("Rp 0.00");
         TUangMasuk.setText("");
         BTotal.setEnabled(false);
@@ -288,36 +287,35 @@ public class Transaksiviews extends javax.swing.JFrame {
     private void BTotalActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BTotalActionPerformed
         String uangMasukStr = TUangMasuk.getText().trim();
         if (uangMasukStr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Masukkan jumlah uang yang dibayar!", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
+            JOptionPane.showMessageDialog(this, "Masukkan jumlah uang yang dibayar!", "Error", JOptionPane.ERROR_MESSAGE); 
+            return; //stop kloinput kosong
         }
 
         try {
             double uangBayar = Double.parseDouble(uangMasukStr);
             if (uangBayar < this.totalHargaKeseluruhan) {
                 JOptionPane.showMessageDialog(this, "Uang yang dibayar kurang!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
+                return; //jika uang kurang
             }
 
             String customerName = JOptionPane.showInputDialog(this, "Masukkan Nama Pelanggan:", "Input Pelanggan", JOptionPane.PLAIN_MESSAGE);
             if (customerName == null) {
-                return;
+                return; // klo klik cancel
             }
 
+            //panggil method finalisasiTransaksi
             long newPurchaseId = Transaksi.finalisasiTransaksi(this.userIdKasir, customerName, this.totalHargaKeseluruhan, this.itemsUntukBayar);
 
-            if (newPurchaseId > 0) { // jika id valid
+            if (newPurchaseId > 0) { // jika mengembalikan id yang valid (artinya sukses)
                 labelTransaksi.setText(String.valueOf(newPurchaseId));
                 double kembalian = uangBayar - this.totalHargaKeseluruhan;
 
                 tampilkanStruk(newPurchaseId, uangBayar, kembalian, customerName);
 
-                loadRiwayatPemasukan();
-                resetForm();
+                loadRiwayatPemasukan(); //refresh tabel riwayat
+                resetForm(); //bersihkan form untuk transaksi selanjutnya
 
-            } else {
-                // Pesan error sudah ditampilkan oleh Model, tidak perlu di sini
-            }
+            }   
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "Input uang bayar tidak valid!", "Error Input", JOptionPane.ERROR_MESSAGE);
         }
@@ -332,7 +330,7 @@ public class Transaksiviews extends javax.swing.JFrame {
             return;
         }
 
-        //ambik id transaksi dari baris yang dipilih (ada di kolom pertama, indeks 0)
+        //ambil id transaksi dari baris yang dipilih (ada di kolom pertama, indeks 0)
         long purchaseIdToDelete = Long.parseLong(tabelPemasukan.getValueAt(selectedRow, 0).toString());
 
         // konfirm ke user

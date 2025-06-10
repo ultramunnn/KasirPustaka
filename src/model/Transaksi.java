@@ -13,11 +13,22 @@ import java.util.List;
 import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
-import model.Koneksi;
 
+/*
+ Kelas ini bertanggung jawab untuk semua logika bisnis dan interaksi database
+ yang terkait dengan proses transaksi, seperti manajemen keranjang, finalisasi
+ pembayaran, dan riwayat.
+ */
 public class Transaksi {
 
-    // Menambahkan SATU ITEM ke keranjang di database
+    /*
+     * param idItem id unik untuk item di keranjang (dibuat di View)
+     * param bookId id buku yang akan ditambahkan
+     * param jumlah Jumlah buku yang dibeli
+     * param harga  Harga satuan buku
+     * return String "ok" jika berhasil, atau pesan error jika gagal
+     */
+    // Menambahkan SATU item ke keranjang di database
     public static String tambahItemKeKeranjang(int idItem, int bookId, int jumlah, double harga) {
         Connection conn = null;
         String checkStockSql = "SELECT title, quantity FROM stock s JOIN books b ON s.book_id = b.book_id WHERE s.book_id = ?";
@@ -44,6 +55,7 @@ public class Transaksi {
                         }
                     } else {
                         conn.rollback();
+                        // batalkan jika buku tidak ditemukan di stok
                         return "Buku dengan ID " + bookId + " tidak ditemukan di daftar stok.";
                     }
                 }
@@ -59,10 +71,11 @@ public class Transaksi {
                 psInsert.executeUpdate();
             }
 
-            conn.commit();
+            conn.commit(); //menyimpan semua perubahan secara permanen karena semua tahap berhasil.
             return "OK";
 
         } catch (SQLException e) {
+            // jika ada error, batalkan semuanya.
             if (conn != null) {
                 try {
                     conn.rollback();
@@ -74,6 +87,7 @@ public class Transaksi {
         } finally {
             if (conn != null) {
                 try {
+                    // tutup koneksi di akhir
                     conn.close();
                 } catch (SQLException e) {
                 }
@@ -81,13 +95,18 @@ public class Transaksi {
         }
     }
 
-    // Menyelesaikan seluruh transaksi
+    // menyelesaikan seluruh transaksi
+    // mencatat transaksi utama ke tabel 'purchases'
+    // menghubungkan semua item di keranjang ke transaksi utama
+    // mengurangi stok buku di gudang
     public static long finalisasiTransaksi(int userIdKasir, String customerName, double totalHarga, List<Object[]> keranjang) {
         Connection conn = null;
         long newPurchaseId = -1;
 
+        //deklarasiin query yang dibutuhkan.
         String sqlPurchase = "INSERT INTO purchases (user_id, customer_name, total_amount) VALUES (?, ?, ?)";
         String sqlUpdateStock = "UPDATE stock SET quantity = quantity - ? WHERE book_id = ?";
+        //buat query dinamis untuk mengupdate semua item di keranjang sekaligus
         List<Integer> itemIds = keranjang.stream().map(item -> Integer.parseInt(item[0].toString())).collect(Collectors.toList());
         String placeholders = itemIds.stream().map(id -> "?").collect(Collectors.joining(", "));
         String sqlUpdateItems = "UPDATE purchase_items SET purchase_id = ? WHERE purchase_item_id IN (" + placeholders + ")";
@@ -96,8 +115,7 @@ public class Transaksi {
             conn = Koneksi.getConnection();
             conn.setAutoCommit(false);
 
-            // Logika validasi stok sudah ada di `tambahItemKeKeranjang`, jadi tidak perlu di sini lagi
-            // 1. INSERT ke purchases
+            // insert ke purchases catat di (purchases) & dapatkan id struknya
             try (PreparedStatement pstmt = conn.prepareStatement(sqlPurchase, Statement.RETURN_GENERATED_KEYS)) {
                 pstmt.setInt(1, userIdKasir);
                 pstmt.setString(2, customerName);
@@ -105,14 +123,14 @@ public class Transaksi {
                 pstmt.executeUpdate();
                 try (ResultSet rs = pstmt.getGeneratedKeys()) {
                     if (rs.next()) {
-                        newPurchaseId = rs.getLong(1);
+                        newPurchaseId = rs.getLong(1); // ambil id yang baru saja dibuat oleh database
                     }
                 }
             }
 
-            // 2. UPDATE purchase_items
+            // update purchase_items
             try (PreparedStatement pstmt = conn.prepareStatement(sqlUpdateItems)) {
-                pstmt.setLong(1, newPurchaseId);
+                pstmt.setLong(1, newPurchaseId);  // set pakai id struk dari langkah sebelumnya
                 int paramIndex = 2;
                 for (Integer id : itemIds) {
                     pstmt.setInt(paramIndex++, id);
@@ -120,14 +138,14 @@ public class Transaksi {
                 pstmt.executeUpdate();
             }
 
-            // 3. UPDATE stock
+            // update stock
             try (PreparedStatement pstmt = conn.prepareStatement(sqlUpdateStock)) {
                 for (Object[] item : keranjang) {
                     pstmt.setInt(1, Integer.parseInt(item[4].toString())); // quantity
                     pstmt.setInt(2, Integer.parseInt(item[1].toString())); // book_id
-                    pstmt.addBatch();
+                    pstmt.addBatch(); //kumpulin perintah update stok
                 }
-                pstmt.executeBatch();
+                pstmt.executeBatch();//jalanin perintah
             }
 
             conn.commit();
@@ -154,7 +172,7 @@ public class Transaksi {
 
         try (Connection conn = Koneksi.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Set parameter dengan aman
+            // set parameter dengan aman
             pstmt.setLong(1, purchaseId);
 
             int rowsAffected = pstmt.executeUpdate();
@@ -199,17 +217,18 @@ public class Transaksi {
         }
     }
 
+    // menghapus satu transaksi berdasarkan idnya dari tabel 'purchases'.
     public static boolean DeleteItemTransaksi(long purchaseId) {
         String sql = "DELETE FROM purchases WHERE purchase_id = ?";
 
         try (Connection conn = Koneksi.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Set parameter dengan aman
+            // set parameter dengan aman
             pstmt.setLong(1, purchaseId);
 
             int rowsAffected = pstmt.executeUpdate();
 
-            // Kembalikan true kalau ada baris yang dihapus
+            //return true kalau ada baris yang dihapus
             return rowsAffected > 0;
 
         } catch (SQLException e) {
@@ -219,6 +238,7 @@ public class Transaksi {
         }
     }
 
+    //menghapus semua data transaksi dari database secara permanen
     public static boolean DeleteAllTransaksi() {
         try (Connection conn = Koneksi.getConnection(); com.mysql.jdbc.Statement stmt = (com.mysql.jdbc.Statement) conn.createStatement()) {
             // set matikan pengecekan foreign kan
@@ -290,24 +310,29 @@ public class Transaksi {
         return model;
     }
 
+    //ngambil semua item yang saat ini ada di keranjang (yang belum dicheckout)
+    //item di keranjang diidentifikasi dengan 'purchase_id' yang nilainya null
     public static DefaultTableModel getKeranjangSaatIni() {
         String[] columnNames = {"Id Item", "Kode Buku", "Judul", "Harga", "Jumlah", "Subtotal"};
         DefaultTableModel model = new DefaultTableModel(null, columnNames);
 
-        String sql = "SELECT pi.purchase_item_id, pi.book_id, b.title, b.price, pi.quantity, pi.subtotal "
-                + "FROM purchase_items pi JOIN books b ON pi.book_id = b.book_id "
-                + "WHERE pi.purchase_id IS NULL ORDER BY pi.purchase_item_id";
-
+        /*
+           ambil kolom 'id item' dari tabel 'purchase_items' (yang kita sebut 'pi'), ambil juga kolom 'id buku' dari tabel 'pi', ambil kolom 'Judul' dari tabel 'books' (yang kita sebut 'b'), ambil kolom 'Harga' dari tabel 'b', ambil kolom 'Jumlah' dari tabel 'pi', ambil kolom 'Subtotal' dari tabel 'pi'."
+         */
+        String sql = "SELECT pi.purchase_item_id, pi.book_id, b.title, b.price, pi.quantity, pi.subtotal " //yang data asalnya dari tabel 'purchase_items', kita kasih nama panggilan 'pi' biar singkat
+                + "FROM purchase_items pi JOIN books b ON pi.book_id = b.book_id " //cari baris dimana nilai 'id buku' di tabel 'pi' = nilai 'id buku' di tabel 'b'
+                + "WHERE pi.purchase_id IS NULL ORDER BY pi.purchase_item_id"; //setelah semua data digabung, filter dimana kolom 'id transaksi' di tabel 'pi' itu kosong (IS NULL) lalu urutkan (ORDER BY) semu yg di temukan berdasarkan kolom 'id item' dari yang terkecil ke terbesar
+        
         try (Connection conn = Koneksi.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
                 model.addRow(new Object[]{
-                    rs.getString("purchase_item_id"),
-                    rs.getString("book_id"),
-                    rs.getString("title"),
-                    rs.getString("price"),
-                    rs.getString("quantity"),
-                    rs.getString("subtotal")
+                    rs.getString("purchase_item_id"), // jadi elemen ke 1 (indeks 0)
+                    rs.getString("book_id"), // jadi elemen ke 2 (indeks 1)
+                    rs.getString("title"), //jadi elemen ke 3 (indeks 2)
+                    rs.getString("price"), //jadi elemen ke 4 (indeks 3)
+                    rs.getString("quantity"), //jadi elemen ke 5 (indeks 4)
+                    rs.getString("subtotal") //jadi elemen ke 6 (indeks 5)
                 });
             }
         } catch (SQLException e) {
@@ -355,7 +380,7 @@ public class Transaksi {
 
                 int rowsAffected = psUpdate.executeUpdate();
                 if (rowsAffected == 0) {
-                   //jika item tidak di temukan
+                    //jika item tidak di temukan
                     conn.rollback();
                     return "Gagal mengedit, item dengan ID " + idItem + " tidak ditemukan.";
                 }

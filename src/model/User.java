@@ -19,7 +19,7 @@ public class User {
     //variabel untuk nyimpan data user yang login
     private int userId;
     private String username;
-    private String password;
+//    private String password;
     private String role;
     private Timestamp createdAt;
 

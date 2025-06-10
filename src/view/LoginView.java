@@ -10,7 +10,6 @@ package view;
  */
 import model.User; //import dari model/user
 import javax.swing.JOptionPane; //untuk menampilkan pesan popUP
-import javax.swing.JTextField;
 
 public class LoginView extends javax.swing.JFrame {
 
@@ -155,6 +154,7 @@ public class LoginView extends javax.swing.JFrame {
         } else {
             //login gagal
             JOptionPane.showMessageDialog(this, "Username atau Password salah", "Login gagal", JOptionPane.ERROR_MESSAGE);
+            TUsername.setText("");
             TPassword.setText("");
             TUsername.requestFocus();
         }
